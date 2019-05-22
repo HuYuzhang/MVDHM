@@ -44,8 +44,10 @@
 #include <cmath>
 #include <algorithm>
 using namespace std;
-
-
+#include "../TLibCommon/hyz.h"
+#ifdef HYZ_PU_T_MERGE_FLAG
+extern int temporal_index;
+#endif
 //! \ingroup TLibEncoder
 //! \{
 
@@ -1299,8 +1301,10 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   }
   UChar uhDepth = rpcTempCU->getDepth( 0 );
   rpcTempCU->setPartSizeSubParts( SIZE_2Nx2N, 0, uhDepth ); // interprets depth relative to CTU level
+
   rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
 
+// So here, we have to decide which candidate come from the T
   Int mergeCandBuffer[MRG_MAX_NUM_CANDS];
   for( UInt ui = 0; ui < numValidMergeCand; ++ui )
   {
@@ -1339,7 +1343,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
           rpcTempCU->setInterDirSubParts( uhInterDirNeighbours[uiMergeCand], 0, 0, uhDepth ); // interprets depth relative to CTU level
           rpcTempCU->getCUMvField( REF_PIC_LIST_0 )->setAllMvField( cMvFieldNeighbours[0 + 2*uiMergeCand], SIZE_2Nx2N, 0, 0 ); // interprets depth relative to rpcTempCU level
           rpcTempCU->getCUMvField( REF_PIC_LIST_1 )->setAllMvField( cMvFieldNeighbours[1 + 2*uiMergeCand], SIZE_2Nx2N, 0, 0 ); // interprets depth relative to rpcTempCU level
-
+          // Indeed, in this stage, we have lost the info if whether this MV comes from T or S, we have to write it earlier! .iku 521
           // do MC
           m_pcPredSearch->motionCompensation ( rpcTempCU, m_ppcPredYuvTemp[uhDepth] );
           // estimate residual and encode everything

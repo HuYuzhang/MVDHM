@@ -54,6 +54,7 @@ using namespace std;
 
 //! \ingroup TLibEncoder
 //! \{
+#ifdef HYZ_PU_T_MERGE_FLAG   
 void printCTUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth)
 {
 
@@ -146,9 +147,17 @@ void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, UInt* all_pu
     if (pcCU->getMergeFlag(uiSubPartIdx))
     {
       ++(*merge_pu);
+      // cout << "+++ " << pcCU->getMVPIdx(REF_PIC_LIST_0, uiSubPartIdx) << endl;
+      TComMv k =  pcCU->getCUMvField( REF_PIC_LIST_0 )->getMv(0);
+      TComMv k2 =  pcCU->getCUMvField( REF_PIC_LIST_1 )->getMv(0);
+      cout << "?? " << pcCU->getCUMvField( REF_PIC_LIST_0 )->getRefIdx(0) << " " << pcCU->getCUMvField( REF_PIC_LIST_1 )->getRefIdx(0);
+      cout << "++ " << k.getHor() << " " << k.getVer();
+      cout << " -- " << k2.getHor() << " " << k2.getVer() << endl;
+
     }
   }
 }
+#endif
 // ====================================================================================================================
 // Constructor / destructor / initialization / destroy
 // ====================================================================================================================
@@ -1774,13 +1783,13 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
         pcPic->getSlice(s)->setSaoEnabledFlag(CHANNEL_TYPE_CHROMA, sliceEnabled[COMPONENT_Cb]);
       }
     }
+#ifdef HYZ_PU_T_MERGE_FLAG   
     // Ohhhh, I misunderstand the meaning of Xia, the meaning is that, up to now we have finish all the work for this frame!
     // Hmat<unsigned char> out_mat(pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples(), pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples);
     UInt startCtuTsAddr;
     UInt boundingCtuTsAddr;
     pcSlice->setSliceSegmentBits(0);
     m_pcSliceEncoder->xDetermineStartAndBoundingCtuTsAddr(startCtuTsAddr, boundingCtuTsAddr, pcPic);
-    
     UInt* all_pu = new unsigned int;
     UInt* merge_pu = new unsigned int;
     (*all_pu) = 0;
@@ -1796,7 +1805,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 
     delete all_pu;
     delete merge_pu;
-
+#endif
     // pcSlice is currently slice 0.
     std::size_t binCountsInNalUnits   = 0; // For implementation of cabac_zero_word stuffing (section 7.4.3.10)
     std::size_t numBytesInVclNalUnits = 0; // For implementation of cabac_zero_word stuffing (section 7.4.3.10)

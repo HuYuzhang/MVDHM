@@ -127,7 +127,8 @@ private:
   // coding tool information
   // -------------------------------------------------------------------------------------------------------------------
 #ifdef HYZ_PU_T_MERGE_FLAG
-  Bool*         t_use;
+  UChar*         t_use1;
+  UChar*         t_use2;
 #endif
   Bool*         m_pbMergeFlag;                          ///< array of merge flags
   UChar*        m_puhMergeIndex;                        ///< array of merge candidate indices
@@ -215,9 +216,6 @@ public:
   // -------------------------------------------------------------------------------------------------------------------
   // member functions for CU data
   // -------------------------------------------------------------------------------------------------------------------
-#ifdef HYZ_PU_T_MERGE_FLAG
-  Void          setTFlagSubParts (Bool skip, UInt absPartIdx, UInt depth);
-#endif
   SChar*        getPartitionSize              ( )                                                          { return m_pePartSize;                       }
   PartSize      getPartitionSize              ( UInt uiIdx ) const                                         { return static_cast<PartSize>( m_pePartSize[uiIdx] ); }
   Void          setPartitionSize              ( UInt uiIdx, PartSize uh )                                  { m_pePartSize[uiIdx] = uh;                  }
@@ -322,6 +320,17 @@ public:
   Void          setMergeFlag                  ( UInt uiIdx, Bool b )                                       { m_pbMergeFlag[uiIdx] = b;                  }
   Void          setMergeFlagSubParts          ( Bool bMergeFlag, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
 
+#ifdef HYZ_PU_T_MERGE_FLAG
+  UChar*        getTFlag1                     ()                                                            { return t_use1; }
+  UChar         getTFlag1                     (UInt uiIdx) const                                            { return t_use1[uiIdx]; }                                                   
+  Void          setTFlag1                     (UInt uiIdx, UChar b)                                         { t_use1[uiIdx] = b;}
+  Void          setTFlagSubParts1             ( UInt uiMergeIndex, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
+
+  UChar*        getTFlag2                     ()                                                            { return t_use2; }
+  UChar         getTFlag2                     (UInt uiIdx) const                                            { return t_use2[uiIdx]; }                                                   
+  Void          setTFlag2                     (UInt uiIdx, UChar b)                                         { t_use2[uiIdx] = b;}
+  Void          setTFlagSubParts2             ( UInt uiMergeIndex, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
+#endif
   UChar*        getMergeIndex                 ( )                                                          { return m_puhMergeIndex;                    }
   UChar         getMergeIndex                 ( UInt uiIdx ) const                                         { return m_puhMergeIndex[uiIdx];             }
   Void          setMergeIndex                 ( UInt uiIdx, UInt uiMergeIndex )                            { m_puhMergeIndex[uiIdx] = uiMergeIndex;     }
@@ -473,11 +482,7 @@ public:
   UInt&         getTotalNumPart               ( )                                                          { return m_uiNumPartition;    }
 
   UInt          getCoefScanIdx                ( const UInt uiAbsPartIdx, const UInt uiWidth, const UInt uiHeight, const ComponentID compID ) const ;
-#ifdef HYZ_PU_T_MERGE_FLAG
-  Bool*         getTFlag();
-  Void          setTFlag(UInt uiIdx, Bool b);
-  Bool          getTFlag(UInt idx);
-#endif
+
 };
 
 namespace RasterAddress
