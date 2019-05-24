@@ -45,9 +45,7 @@
 #include <algorithm>
 using namespace std;
 #include "../TLibCommon/hyz.h"
-#ifdef HYZ_PU_T_MERGE_FLAG
-extern int temporal_index;
-#endif
+
 //! \ingroup TLibEncoder
 //! \{
 
@@ -1302,9 +1300,23 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   UChar uhDepth = rpcTempCU->getDepth( 0 );
   rpcTempCU->setPartSizeSubParts( SIZE_2Nx2N, 0, uhDepth ); // interprets depth relative to CTU level
 
-  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
-
+#ifdef HYZ_PU_T_MERGE_FLAG
+// With our modification to the code, we now get our time index
 // So here, we have to decide which candidate come from the T
+  rpcTempCU->t_index = -1;
+  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
+  if (rpcTempCU->t_index == -1)
+  {
+    // Then there must be something wrong, when It happens, we have to sop the program. And then? dont care right now~
+    printf("Wrong, after get merge candidates, the t_index is still -1!");
+    exit(1);
+  }
+  rpcTempCU->setTFlagSubParts1(rpcTempCU->t_index, 0, 0, uhDepth);
+  // Ok, I think now we have write down the t_index to the CU internally, juts output when
+  // finish encoding one frame and let's see what will happen~
+#else
+  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
+#endif
   Int mergeCandBuffer[MRG_MAX_NUM_CANDS];
   for( UInt ui = 0; ui < numValidMergeCand; ++ui )
   {

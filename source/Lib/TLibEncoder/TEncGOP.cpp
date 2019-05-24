@@ -146,14 +146,12 @@ void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, UInt* all_pu
     ++(*all_pu);
     if (pcCU->getMergeFlag(uiSubPartIdx))
     {
-      ++(*merge_pu);
-      // cout << "+++ " << pcCU->getMVPIdx(REF_PIC_LIST_0, uiSubPartIdx) << endl;
-      TComMv k =  pcCU->getCUMvField( REF_PIC_LIST_0 )->getMv(0);
-      TComMv k2 =  pcCU->getCUMvField( REF_PIC_LIST_1 )->getMv(0);
-      cout << "?? " << pcCU->getCUMvField( REF_PIC_LIST_0 )->getRefIdx(0) << " " << pcCU->getCUMvField( REF_PIC_LIST_1 )->getRefIdx(0);
-      cout << "++ " << k.getHor() << " " << k.getVer();
-      cout << " -- " << k2.getHor() << " " << k2.getVer() << endl;
-
+      UChar real_index = pcCU->getMergeIndex(uiSubPartIdx);// This is what the real index is
+      UChar time_index = pcCU->getTFlag1(uiSubPartIdx);// This is what the time index is
+      if (real_index == time_index)
+      {
+        ++(*merge_pu);
+      }
     }
   }
 }
