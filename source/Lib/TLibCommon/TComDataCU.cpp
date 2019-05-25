@@ -2213,7 +2213,11 @@ Bool TComDataCU::hasEqualMotion( UInt uiAbsPartIdx, const TComDataCU* pcCandCU, 
 }
 
 //! Construct a list of merging candidates, this is used in the merge mode, and I believe that we will see the rerscale function here .iku 20
+#ifdef HYZ_PU_T_MERGE_FLAG
 Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMvFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx )
+#else
+Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMvFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx ) const
+#endif
 {
   UInt uiAbsPartAddr = m_absZIdxInCtu + uiAbsPartIdx;
   Bool abCandIsInter[ MRG_MAX_NUM_CANDS ];
@@ -2436,7 +2440,9 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     }
 
     iRefIdx = 0;
-
+#ifdef HYZ_PU_T_MERGE_FLAG
+	Int get_temporal_flag = 0;
+#endif
     Bool bExistMV = false;
     UInt uiPartIdxCenter;
     Int dir = 0;
@@ -2451,14 +2457,24 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     {
       dir |= 1;
       pcMvFieldNeighbours[ 2 * uiArrayAddr ].setMvField( cColMv, iRefIdx );// !!!!! cColMv is the temporal mv, and here we set it to our array, hence uiArrayAddr is just what we need to record, because it is the index of TMV! .iku 521
-    }// But now the problem is how to transport this number to the outer?
+#ifdef HYZ_PU_T_MERGE_FLAG
+	  get_temporal_flag = 1;
+#endif
+	}// But now the problem is how to transport this number to the outer?
     // If it is B frame, we need to find in list(according to CSDN, but what is so called 'list'?) .iku 521
 
 #ifdef HYZ_PU_T_MERGE_FLAG
     // Now assume that we only have P slice, so we don't have to consider the next if block!
     // And here we will capture the index of the temporal index!
     // But what was it? we can see that it is just the uiArrayAddr!
-    this->t_index = uiArrayAddr;
+	if (get_temporal_flag)
+	{
+		this->t_index = uiArrayAddr;
+	}
+	else
+	{
+		this->t_index = -2;
+	}
     // Ok, now we easily get what we want to get!
 #endif
     
@@ -2659,7 +2675,11 @@ Void TComDataCU::getPartPosition( UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int
  * \param iRefIdx
  * \param pInfo
  */
+#ifdef HYZ_PU_T_MERGE_FLAG
+Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo )
+#else
 Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo ) const
+#endif
 {
   pInfo->iN = 0;
   if (refIdx < 0)
@@ -2735,7 +2755,9 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
       pInfo->iN = 1;
     }
   }
-
+#ifdef HYZ_PU_T_MERGE_FLAG
+  Int get_temporal_flag = 0;
+#endif
   if (pInfo->iN < AMVP_MAX_NUM_CANDS && getSlice()->getEnableTMVPFlag() )
   {
     // Get Temporal Motion Predictor
@@ -2775,9 +2797,14 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
         absPartAddr = 0;
       }
     }// Below is what we add the col to the MVP list
+
+
     if ( ctuRsAddr >= 0 && xGetColMVP( eRefPicList, ctuRsAddr, absPartAddr, cColMv, refIdx_Col ) )
     {
       pInfo->m_acMvCand[pInfo->iN++] = cColMv;
+#ifdef HYZ_PU_T_MERGE_FLAG
+	  get_temporal_flag = 1;
+#endif
     }
     else
     {
@@ -2786,10 +2813,24 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
       if (xGetColMVP( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col ))
       {
         pInfo->m_acMvCand[pInfo->iN++] = cColMv;
+#ifdef HYZ_PU_T_MERGE_FLAG
+		get_temporal_flag = 1;
+#endif
       }
     }
     //----  co-located RightBottom Temporal Predictor  ---//
   }
+#ifdef HYZ_PU_T_MERGE_FLAG
+// In a word, above we use the xGetColMVP function to get the temporal MV, and hence we can write it~
+  if (get_temporal_flag == 0)
+  {
+	  this->t_index = -2;
+  }
+  else
+  {
+	  this->t_index = pInfo->iN - 1;
+  }
+#endif
   // Fill (0, 0) until the list is fill
   while (pInfo->iN < AMVP_MAX_NUM_CANDS)
   {

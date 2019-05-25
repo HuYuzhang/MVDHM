@@ -3424,12 +3424,35 @@ Void TEncSearch::xEstimateMvPredAMVP( TComDataCU* pcCU, TComYuv* pcOrgYuv, UInt 
   Int        i;
 
   pcCU->getPartIndexAndSize( uiPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
+
+#ifdef HYZ_PU_T_MERGE_FLAG
+  // OK! we now now in LDB, the eRefPicList will always be the REF_PIC_LIST_0!!!!!!!!!!!!!!!!!!!!!!!!
+  pcCU->t_index = -1;
   // Fill the MV Candidates
   if (!bFilled)// Checlk if the candidate list is full
-  {
+  {// This part I also need to care, because different from Merge mode, Here we use different function to fill the candidate list
     pcCU->fillMvpCand( uiPartIdx, uiPartAddr, eRefPicList, iRefIdx, pcAMVPInfo );
   }
-
+  if (pcCU->t_index == -1)
+  {// Here we double check if the temporal_index is really got
+    printf("Wrong, in AMVP position, the temporal_index is still -1!\n");
+    exit(1);
+  }
+  else if (pcCU->t_index == -2)
+  {
+	  pcCU->setTFlagSubParts1(255, uiPartAddr, uiPartIdx, pcCU->getDepth(uiPartAddr));
+  }
+  else
+  {
+	  pcCU->setTFlagSubParts1(pcCU->t_index, uiPartAddr, uiPartIdx, pcCU->getDepth(uiPartAddr));
+  }
+#else
+  // Fill the MV Candidates
+  if (!bFilled)// Checlk if the candidate list is full
+  {// This part I also need to care, because different from Merge mode, Here we use different function to fill the candidate list
+    pcCU->fillMvpCand( uiPartIdx, uiPartAddr, eRefPicList, iRefIdx, pcAMVPInfo );
+  }
+#endif
   // initialize Mvp index & Mvp
   iBestIdx = 0;
   cBestMv  = pcAMVPInfo->m_acMvCand[0];

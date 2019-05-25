@@ -377,7 +377,11 @@ public:
 
   static Void   getMvField                    ( const TComDataCU* pcCU, UInt uiAbsPartIdx, RefPicList eRefPicList, TComMvField& rcMvField );
 
-  Void          fillMvpCand                   ( const UInt uiPartIdx, const UInt uiPartAddr, const RefPicList eRefPicList, const Int iRefIdx, AMVPInfo* pInfo ) const;
+#ifdef HYZ_PU_T_MERGE_FLAG
+Void            fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo );
+#else
+Void            fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo ) const;
+#endif  
   Bool          isDiffMER                     ( Int xN, Int yN, Int xP, Int yP ) const;
   Void          getPartPosition               ( UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int& nPSH ) const;
 
@@ -441,8 +445,11 @@ public:
   Void          deriveLeftBottomIdx           ( UInt uiPartIdx, UInt& ruiPartIdxLB ) const;
 
   Bool          hasEqualMotion                ( UInt uiAbsPartIdx, const TComDataCU* pcCandCU, UInt uiCandAbsPartIdx ) const;
+#ifdef HYZ_PU_T_MERGE_FLAG
   Void          getInterMergeCandidates       ( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx = -1 );
-
+#else
+  Void          getInterMergeCandidates       ( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx = -1 ) const;
+#endif
   Void          deriveLeftRightTopIdxGeneral  ( UInt uiAbsPartIdx, UInt uiPartIdx, UInt& ruiPartIdxLT, UInt& ruiPartIdxRT ) const;
   Void          deriveLeftBottomIdxGeneral    ( UInt uiAbsPartIdx, UInt uiPartIdx, UInt& ruiPartIdxLB ) const;
 

@@ -1311,7 +1311,15 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
     printf("Wrong, after get merge candidates, the t_index is still -1!");
     exit(1);
   }
-  rpcTempCU->setTFlagSubParts1(rpcTempCU->t_index, 0, 0, uhDepth);
+  else if (rpcTempCU->t_index == -2)
+  {
+	  // This situation, we don't get the temporal index, because we can't find it
+	  rpcTempCU->setTFlagSubParts1(255, 0, 0, uhDepth);
+  }
+  else
+  {
+	  rpcTempCU->setTFlagSubParts1(rpcTempCU->t_index, 0, 0, uhDepth);
+  }
   // Ok, I think now we have write down the t_index to the CU internally, juts output when
   // finish encoding one frame and let's see what will happen~
 #else

@@ -96,7 +96,7 @@ void printCTUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth)
 	}
 	cout << "CUInfo: " << pcCU->getSlice()->getPOC() << ' ' << uiTPelY << ' ' << uiLPelX << ' ' << (maxCUWidth >> uiDepth) << ' ' << (maxCUHeight >> uiDepth)<<' ' << endl;
 }
-void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, UInt* all_pu, UInt* merge_pu)
+void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, int** p)
 {
 
 	TComPic   *const pcPic = pcCU->getPic();
@@ -130,29 +130,44 @@ void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, UInt* all_pu
 			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
 			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
 			{
-				printPUInfo(pcCU, uiAbsPartIdx, uiDepth + 1, all_pu, merge_pu);
+				printPUInfo(pcCU, uiAbsPartIdx, uiDepth + 1, p);
 			}
 		}
 		return;
 	}
-
+	if (pcCU->isIntra(uiAbsPartIdx))
+	{
+		return;
+	}
   // Now we have reached the lowest CU, Here we can found our PUs~ .iku 520
   PartSize ePartSize = pcCU->getPartitionSize( uiAbsPartIdx );
   UInt uiNumPU = ( ePartSize == SIZE_2Nx2N ? 1 : ( ePartSize == SIZE_NxN ? 4 : 2 ) );// OK, we have 3 conditions, and each responds to different number of PU~ .iku 520
   UInt cur_uiDepth = pcCU->getDepth( uiAbsPartIdx );
   UInt uiPUOffset = ( g_auiPUOffset[UInt( ePartSize )] << ( ( pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - cur_uiDepth ) << 1 ) ) >> 4;
+  int* statics = *p;
+
   for ( UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset )
   {
-    ++(*all_pu);
+	  ++statics[0];
     if (pcCU->getMergeFlag(uiSubPartIdx))
     {
+		++statics[1];
       UChar real_index = pcCU->getMergeIndex(uiSubPartIdx);// This is what the real index is
       UChar time_index = pcCU->getTFlag1(uiSubPartIdx);// This is what the time index is
       if (real_index == time_index)
       {
-        ++(*merge_pu);
+		  ++statics[2];
       }
     }
+	else
+	{
+		UChar real_index1 = pcCU->getMVPIdx(REF_PIC_LIST_0, uiSubPartIdx);
+		UChar time_index = pcCU->getTFlag1(uiSubPartIdx);
+		if (real_index1 == time_index)
+		{
+			++statics[3];
+		}
+	}
   }
 }
 #endif
@@ -1788,21 +1803,25 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     UInt boundingCtuTsAddr;
     pcSlice->setSliceSegmentBits(0);
     m_pcSliceEncoder->xDetermineStartAndBoundingCtuTsAddr(startCtuTsAddr, boundingCtuTsAddr, pcPic);
-    UInt* all_pu = new unsigned int;
-    UInt* merge_pu = new unsigned int;
-    (*all_pu) = 0;
-    (*merge_pu) = 0;
+
+	int* p = new int(4);
+	for (int i = 0; i < 4; ++i)
+	{
+		p[i] = 0;
+	}
     for (UInt ctuTsAddr = startCtuTsAddr; ctuTsAddr < boundingCtuTsAddr; ++ctuTsAddr)
     {
       const UInt ctuRsAddr = pcPic->getPicSym()->getCtuTsToRsAddrMap(ctuTsAddr);
       TComDataCU* pCtu = pcPic->getCtu(ctuRsAddr);
       // printCTUInfo(pCtu, 0, 0);
-      printPUInfo(pCtu, 0, 0, all_pu, merge_pu);
+      printPUInfo(pCtu, 0, 0, &p);
     }
-    cout << "Merge info: " << (*all_pu) << " " << (*merge_pu) << ", and the rate is " << (float)(*merge_pu) /  (float)(*all_pu) << endl;
-
-    delete all_pu;
-    delete merge_pu;
+	cout << "Total:" << p[0] << endl;
+	/*cout << " Merge PU: " << p[1] << ", temporal PU: " << p[2] << " rate: " << (float)p[2] / (0.1 + (float)p[1]) << endl;
+	cout << " AMVP PU: " << p[0] - p[1] << ", temporal PU: " << p[3] << " rate: " << (float)p[3] / (0.1 + (float)(p[0] - p[1])) << endl;*/
+	cout << " Merge PU: " << p[1] << ", temporal PU: " << p[2] << " rate: " << (float)p[2] / (0.1 + (float)p[0]) << endl;
+	cout << " AMVP PU: " << p[0] - p[1] << ", temporal PU: " << p[3] << " rate: " << (float)p[3] / (0.1 + (float)(p[0])) << endl;
+	//delete[] p;
 #endif
     // pcSlice is currently slice 0.
     std::size_t binCountsInNalUnits   = 0; // For implementation of cabac_zero_word stuffing (section 7.4.3.10)
