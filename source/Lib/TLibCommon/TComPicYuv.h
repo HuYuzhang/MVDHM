@@ -43,7 +43,7 @@
 #include "TComRom.h"
 #include "TComChromaFormat.h"
 #include "SEI.h"
-
+#include "hyz.h"
 //! \ingroup TLibCommon
 //! \{
 
@@ -81,6 +81,9 @@ private:
   Bool  m_bIsBorderExtended;
 
 public:
+#ifdef HYZ_OF_FRAME
+	Void          dump2(UChar* p, const BitDepths &bitDepths);
+#endif
                TComPicYuv         ();
   virtual     ~TComPicYuv         ();
 
@@ -177,5 +180,7 @@ UInt calcCRC     (const TComPicYuv& pic, TComPictureHash &digest, const BitDepth
 UInt calcMD5     (const TComPicYuv& pic, TComPictureHash &digest, const BitDepths &bitDepths);
 std::string hashToString(const TComPictureHash &digest, Int numChar);
 //! \}
+
+
 
 #endif // __TCOMPICYUV__

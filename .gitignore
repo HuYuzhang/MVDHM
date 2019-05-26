@@ -1,1 +1,11 @@
-.vscode
+*vscode*
+*.pyc
+*.png
+tfoptflow/.vscode/*
+tfoptflow/__pycache__/*
+tfoptflow/img/*
+tfoptflow/models/*
+tfoptflow/samples/*
+tfoptflow/setup/*
+tfoptflow/*.ipynb
+*.png

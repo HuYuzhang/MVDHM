@@ -1237,7 +1237,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
   {
     m_pcCfg->setEncodedFlag(iGOPid, false);
   }
-
+  // OK, Here is the main part of encoding the GOP. I think below must have function to read YUV from the original YUV file .iku 5.26
   for ( Int iGOPid=0; iGOPid < m_iGopSize; iGOPid++ )
   {
     if (m_pcCfg->getEfficientFieldIRAPEnabled())
@@ -1299,7 +1299,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     pcPic->allocateNewSlice();
     m_pcSliceEncoder->setSliceIdx(0);
     pcPic->setCurrSliceIdx(0);
-
+	
     m_pcSliceEncoder->initEncSlice ( pcPic, iPOCLast, pocCurr, iGOPid, pcSlice, isField );
 
     pcSlice->setLastIDR(m_iLastIDR);
@@ -1448,7 +1448,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     refPicListModification->setRefPicListModificationFlagL1(0);
     pcSlice->setNumRefIdx(REF_PIC_LIST_0,min(m_pcCfg->getGOPEntry(iGOPid).m_numRefPicsActive,pcSlice->getRPS()->getNumberOfPictures()));
     pcSlice->setNumRefIdx(REF_PIC_LIST_1,min(m_pcCfg->getGOPEntry(iGOPid).m_numRefPicsActive,pcSlice->getRPS()->getNumberOfPictures()));
-
+	
     //  Set reference list
     pcSlice->setRefPicList ( rcListPic );
 
@@ -1661,7 +1661,40 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     const Int numSubstreamRows     = pcSlice->getPPS()->getEntropyCodingSyncEnabledFlag() ? pcPic->getFrameHeightInCtus() : (pcSlice->getPPS()->getNumTileRowsMinus1() + 1);
     const Int numSubstreams        = numSubstreamRows * numSubstreamsColumns;
     std::vector<TComOutputBitstream> substreamsOut(numSubstreams);
-
+#ifdef HYZ_OF_FRAME
+	BitDepths tmpB = pcPic->getPicSym()->getSPS().getBitDepths();
+	UInt height = pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples();
+	UInt width = pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples();
+	TComPicYuv* orgP = pcPic->getPicYuvOrg();
+	cv::Mat curImg;
+	curImg.create(height * 3 / 2, width, CV_8UC1);
+	pcPic->getPicYuvOrg()->dump2((UChar*)curImg.data, tmpB);
+	cv::Mat rgbImg;
+	cv::cvtColor(curImg, rgbImg, CV_YUV2BGR_I420);
+	Int curPOC = pcPic->getPOC();
+	std::string fileName = std::to_string(curPOC) + ".png";
+	cv::imwrite(fileName, rgbImg);
+	if (curPOC != 0)// For POC 0, we have to way to calculate its optical flow~
+	{
+		std::string dstName = "0.png ";
+		std::string srcName = std::to_string(curPOC) + ".png ";
+		std::string modelName = "pwcnet.ckpt-595000";
+		std::string cmd_string = "D:\\hyz\\Anaconda3\\envs\\pwc\\python.exe tfoptflow\\pwcnet_predict_from_img_pairs.py ";
+		cmd_string += dstName;
+		cmd_string += srcName;
+		cmd_string += modelName;
+		std::cout << cmd_string << endl;
+		//FILE* fp = _popen(cmd_string.c_str(), "r");
+		FILE* fp = _popen(cmd_string.c_str(), "r");
+		char buf[255];
+		while (fgets(buf, 255, fp) != NULL)
+		{
+			std::cout << buf;
+		}
+		_pclose(fp);
+		// Then we should use python to calculate the optical flow!
+	}
+#endif
     // now compress (trial encode) the various slice segments (slices, and dependent slices)
     {
       const UInt numberOfCtusInFrame=pcPic->getPicSym()->getNumberOfCtusInFrame();
@@ -1796,6 +1829,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
         pcPic->getSlice(s)->setSaoEnabledFlag(CHANNEL_TYPE_CHROMA, sliceEnabled[COMPONENT_Cb]);
       }
     }
+	std::cout << pcSlice->getPOC() << endl;
 #ifdef HYZ_PU_T_MERGE_FLAG   
     // Ohhhh, I misunderstand the meaning of Xia, the meaning is that, up to now we have finish all the work for this frame!
     // Hmat<unsigned char> out_mat(pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples(), pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples);

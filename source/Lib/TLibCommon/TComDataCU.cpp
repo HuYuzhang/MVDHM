@@ -3061,8 +3061,7 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
           }
           else
           {
-            //rcMv = cMvPred.scaleMv( scale );
-              rcMv = cMvPred;
+			 rcMv = cMvPred.scaleMv( scale );
           }
         }
 
