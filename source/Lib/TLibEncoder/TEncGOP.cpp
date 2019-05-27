@@ -51,7 +51,7 @@
 
 #include <deque>
 using namespace std;
-
+extern OData globalOData;
 //! \ingroup TLibEncoder
 //! \{
 #ifdef HYZ_PU_T_MERGE_FLAG   
@@ -1676,7 +1676,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 	cv::imwrite(fileName, rgbImg);
 	if (curPOC != 0)// For POC 0, we have to way to calculate its optical flow~
 	{
-		std::string dstName = "0.png ";
+		std::string dstName = std::to_string(globalOData.getPrevPOC()) + ".png ";
 		std::string srcName = std::to_string(curPOC) + ".png ";
 		std::string modelName = "pwcnet.ckpt-595000";
 		std::string cmd_string = "D:\\hyz\\Anaconda3\\envs\\pwc\\python.exe tfoptflow\\pwcnet_predict_from_img_pairs.py ";
@@ -1692,6 +1692,13 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 			std::cout << buf;
 		}
 		_pclose(fp);
+		std::string optflowName = "opt.log";
+		std::ifstream fin(optflowName);
+		Float Fx, Fy;
+		fin >> Fx >> Fy;
+		std::cout << Fx << " " << Fy << endl;
+		fin.close();
+		globalOData.set(curPOC, Fx, Fy);// Remember that we will update the "prevPOC" field each time we call the "set" function
 		// Then we should use python to calculate the optical flow!
 	}
 #endif

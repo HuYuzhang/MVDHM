@@ -163,8 +163,11 @@ protected:
   Bool          xGetColMVP                    ( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const;
 
   /// compute scaling factor from POC difference
+#ifdef HYZ_OF_FRAME
+  static Void    xGetDistScaleFactor( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, Float** p );
+#else
   static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
-
+#endif
   Void          xDeriveCenterIdx              ( UInt uiPartIdx, UInt& ruiPartIdxCenter ) const;
 
 public:

@@ -39,7 +39,7 @@
 #define __TCOMMV__
 
 #include "CommonDef.h"
-
+#include "hyz.h"
 //! \ingroup TLibCommon
 //! \{
 
@@ -157,12 +157,33 @@ public:
     return (m_iHor!=rcMv.m_iHor || m_iVer!=rcMv.m_iVer);
   }
 
-  const TComMv scaleMv( Int iScale ) const
+  
+#ifdef HYZ_OF_FRAME
+#ifdef HYZ_OF_ONE_DIR
+  const TComMv scaleMv(Int iScale) const
   {
-    Int mvx = Clip3( -32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8 );
-    Int mvy = Clip3( -32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8 );
-    return TComMv( mvx, mvy );
+	  Int mvx = iScale * getHor();
+	  Int mvy = iScale * getVer();
+	  return TComMv( mvx, mvy );
   }
+#else
+  const TComMv scaleMv(Float iScaleX, Float iScaleY) const
+  {
+	  /*Int mvx = Clip3(-32768, 32767, (iScaleX * getHor() + 127 + (iScaleX * getHor() < 0)) >> 8);
+	  Int mvy = Clip3(-32768, 32767, (iScaleY * getVer() + 127 + (iScaleY * getVer() < 0)) >> 8);*/
+	  Int mvx = Int(Float(iScaleX) * Float(getHor()));
+	  Int mvy = Int(Float(iScaleY) * Float(getVer()));
+	  return TComMv(mvx, mvy);
+  }
+#endif
+#else
+  const TComMv scaleMv(Int iScale) const
+  {
+	  Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	  return TComMv(mvx, mvy);
+  }
+#endif
 };// END CLASS DEFINITION TComMV
 
 //! \}

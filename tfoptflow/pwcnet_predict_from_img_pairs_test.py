@@ -77,3 +77,14 @@ with open("opt.log", 'w') as f:
     f.write(str(np.mean(pred_labels[0][:,:,1])))
     f.close()
 
+import numpy as np
+import cv2
+xx = pred_labels[0][:,:,0] * 5 + 100.0
+xx = xx.astype(np.uint8)
+cv2.imwrite('xx.png', xx)
+yy = pred_labels[0][:,:,1] * 5 + 100.0
+yy = yy.astype(np.uint8)
+cv2.imwrite('yy.png', yy)
+import IPython
+IPython.embed()
+display_img_pairs_w_flows(img_pairs, pred_labels)
