@@ -70,7 +70,7 @@ nn.print_config()
 pred_labels = nn.predict_from_img_pairs(img_pairs, batch_size=1, verbose=False)
 # print(pred_labels[0].shape)
 import numpy as np
-# print(np.mean(pred_labels[0][:,:,0]), np.mean(pred_labels[0][:,:,1]))
+print(np.mean(pred_labels[0][:,:,0]), np.mean(pred_labels[0][:,:,1]))
 with open("opt.log", 'w') as f:
     f.write(str(np.mean(pred_labels[0][:,:,0])))
     f.write(' ')
@@ -85,6 +85,6 @@ cv2.imwrite('xx.png', xx)
 yy = pred_labels[0][:,:,1] * 5 + 100.0
 yy = yy.astype(np.uint8)
 cv2.imwrite('yy.png', yy)
-import IPython
-IPython.embed()
-display_img_pairs_w_flows(img_pairs, pred_labels)
+# import IPython
+# IPython.embed()
+# display_img_pairs_w_flows(img_pairs, pred_labels)

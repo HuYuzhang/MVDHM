@@ -3205,21 +3205,22 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 {
 	Int iDiffPocD = iColPOC - iColRefPOC;
 	Int iDiffPocB = iCurrPOC - iCurrRefPOC;
-	Int ret = 0;
+	Int ret = 20;
+	Int iScale;
 	if (iDiffPocD == iDiffPocB)
 	{
-		ret = 4096;
+		iScale = 4096;
 	}
 	else
 	{// we need to be careful  that if iDiffPocD and iDiffPocB is 4 and 8, then we won't return 2, but 128... this number will be recalculate in cColMv.scaleMv
 		Int iTDB = Clip3(-128, 127, iDiffPocB);
 		Int iTDD = Clip3(-128, 127, iDiffPocD);
 		Int iX = (0x4000 + abs(iTDD / 2)) / iTDD;
-		Int iScale = Clip3(-4096, 4095, (iTDB * iX + 32) >> 6);
-		Int tmp = 20;
-		ret = (iScale * tmp + 127 + (iScale * tmp < 0)) >> 8;
+		iScale = Clip3(-4096, 4095, (iTDB * iX + 32) >> 6);
+		
 	}
-
+	ret = (iScale * 20 + 127 + (iScale * 20 < 0)) >> 8;
+	Float hm = (Float)(ret) / 20.0;
 	/*Float FxCur = globalOData.query(0, iCurrPOC, X_DIR) - globalOData.query(0, iCurrRefPOC, X_DIR);
 	Float FyCur = globalOData.query(0, iCurrPOC, Y_DIR) - globalOData.query(0, iCurrRefPOC, Y_DIR);
 	Float FxCol = globalOData.query(0, iColPOC, X_DIR) - globalOData.query(0, iColRefPOC, X_DIR);
@@ -3230,10 +3231,24 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 	Float FyCol = globalOData.query(iColRefPOC, iColPOC, Y_DIR);
 	Float* scales = *p;
 	
-	scales[0] = Float(QQ(FxCur)) / Float(QQ(FxCol));
-	scales[1] = Float(QQ(FyCur)) / Float(QQ(FyCol));
+	/*scales[0] = Float(QQ(FxCur)) / Float(QQ(FxCol));
+	scales[1] = Float(QQ(FyCur)) / Float(QQ(FyCol));*/
 
-
+	scales[0] = FxCur / FxCol;
+	scales[1] = FyCur / FyCol;
+	if (abs(scales[0]) > abs(2.0) * hm)
+	{
+		scales[0] = 2 * hm;
+	}
+	if (abs(scales[1]) > abs(2.0) * hm)
+	{
+		scales[1] = 2.0 * hm;
+	}
+	if (iScale != 4096)
+	{
+		//std::cout << hm << " " << scales[0] << " " << scales[1] << endl;
+		iScale = iScale;
+	}
 
 }
 
