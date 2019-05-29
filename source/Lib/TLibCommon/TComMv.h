@@ -167,12 +167,16 @@ public:
 	  return TComMv( mvx, mvy );
   }
 #else
-  const TComMv scaleMv(Float iScaleX, Float iScaleY) const
+  const TComMv scaleMv(Float iScaleX, Float iScaleY, Float ori) const
   {
 	  /*Int mvx = Clip3(-32768, 32767, (iScaleX * getHor() + 127 + (iScaleX * getHor() < 0)) >> 8);
 	  Int mvy = Clip3(-32768, 32767, (iScaleY * getVer() + 127 + (iScaleY * getVer() < 0)) >> 8);*/
 	  Int mvx = Int(Float(iScaleX) * Float(getHor()));
 	  Int mvy = Int(Float(iScaleY) * Float(getVer()));
+	  Int iScale = (Int)ori;
+	  Int mvx2 = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	  Int mvy2 = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	  std::cout << mvx << " VS: " << mvx2 << "  " << mvy << " VS: " << mvy2 << endl;
 	  return TComMv(mvx, mvy);
   }
 #endif

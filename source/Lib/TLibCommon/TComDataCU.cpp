@@ -3057,9 +3057,9 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
         {
           const Int neibRefPOC = neibCU->getSlice()->getRefPOC( eRefPicListIndex, neibRefIdx );
 #ifdef HYZ_OF_FRAME
-		  Float* scales = new Float(2);
+		  Float* scales = new Float(3);
 		  xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC, &scales);// That is where the scaleFactor is called .iku 521
-		  rcMv = cMvPred.scaleMv( scales[0], scales[1] );
+		  rcMv = cMvPred.scaleMv(scales[0], scales[1],  scales[2]);
 		  //delete[] scales;
 #else
 		  const Int scale      = xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
@@ -3069,7 +3069,11 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
           }
           else
           {
-			 rcMv = cMvPred.scaleMv( scale );
+#ifdef HYZ_NO_SCALE
+			  rcMv = cMvPred;
+#else
+			  rcMv = cMvPred.scaleMv(scale);
+#endif
           }
 #endif
         }
@@ -3168,9 +3172,9 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 #endif
     const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
 #ifdef HYZ_OF_FRAME
-	Float* scales = new Float(2);
+	Float* scales = new Float(3);
 	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, &scales);// That is where the scaleFactor is called .iku 521
-	rcMv = cColMv.scaleMv(scales[0], scales[1]);
+	rcMv = cColMv.scaleMv(scales[0], scales[1], scales[2]);
 	//delete[] scales;
 #else
     const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
@@ -3180,7 +3184,11 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
     }
     else
     {
-      rcMv = cColMv.scaleMv( scale );
+#ifdef HYZ_NO_SCALE
+		rcMv = cColMv;
+#else
+		rcMv = cColMv.scaleMv(scale);
+#endif
     }
 #endif
   }
@@ -3219,7 +3227,11 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 		iScale = Clip3(-4096, 4095, (iTDB * iX + 32) >> 6);
 		
 	}
-	ret = (iScale * 20 + 127 + (iScale * 20 < 0)) >> 8;
+	if (iScale == 4096)
+	{
+		ret = 20;
+	}
+	else{ ret = Clip3(-32768, 32767, (iScale * 20 + 127 + (iScale * 20 < 0)) >> 8); }
 	Float hm = (Float)(ret) / 20.0;
 	/*Float FxCur = globalOData.query(0, iCurrPOC, X_DIR) - globalOData.query(0, iCurrRefPOC, X_DIR);
 	Float FyCur = globalOData.query(0, iCurrPOC, Y_DIR) - globalOData.query(0, iCurrRefPOC, Y_DIR);
@@ -3233,9 +3245,23 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 	
 	/*scales[0] = Float(QQ(FxCur)) / Float(QQ(FxCol));
 	scales[1] = Float(QQ(FyCur)) / Float(QQ(FyCol));*/
+#ifdef HYZ_UP_INT
+	scales[0] = QQ(abs(FxCur / FxCol));
+	scales[1] = QQ(abs(FyCur / FyCol));
+#else
+	scales[0] = abs(FxCur / FxCol);
+	scales[1] = abs(FyCur / FyCol);
+	scales[2] = iScale;
+	if (scales[0] < hm)
+	{
+		scales[0] = hm;
+	}
+	if (scales[1] < hm)
+	{
+		scales[1] = hm;
+	}
+#endif
 
-	scales[0] = FxCur / FxCol;
-	scales[1] = FyCur / FyCol;
 	if (abs(scales[0]) > abs(2.0) * hm)
 	{
 		scales[0] = 2 * hm;
@@ -3246,7 +3272,11 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 	}
 	if (iScale != 4096)
 	{
-		//std::cout << hm << " " << scales[0] << " " << scales[1] << endl;
+		if (hm < 0)
+		{
+			std::cout << iCurrPOC << " " << iCurrRefPOC << " " << iColPOC << " " << iColRefPOC << " " << hm << " " << scales[0] << " " << scales[1] << endl;
+		}
+
 		iScale = iScale;
 	}
 
