@@ -3,7 +3,10 @@
 
 #include "CommonDef.h"
 #include <vector>
-
+#include <map>
+#include <opencv2\core\core.hpp>
+#include <opencv2\opencv.hpp>
+#include <opencv2\imgproc\imgproc.hpp>
 #define X_DIR 0
 #define Y_DIR 1
 class OData
@@ -15,6 +18,9 @@ private:
 	std::vector<Int> prev;
 	std::vector<Int> POCs;
 	Int prevPOC;
+	std::map<Int, Int> poc2flow;// This map the POC to the optial map's index
+	std::map<Int, Int> poc2prev;
+	std::vector<cv::Mat_<float>> ofMaps;// Each time we calcute a new optical flow, we will push it back to this vector
 public:
 	OData();
 	OData(UInt len);
@@ -22,6 +28,7 @@ public:
 	Float query(UInt idSrc, UInt idDst, UInt dir);
 	Void set(UInt curPOC, Float x, Float y);
 	Int getPrevPOC();
+	Void updateMap(Int curPOC, cv::Mat_<float>* ofMap);
 };
 
 #endif

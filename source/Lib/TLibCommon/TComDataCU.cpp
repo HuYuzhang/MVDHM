@@ -66,7 +66,7 @@ TComDataCU::TComDataCU()
   m_ChromaQpAdj        = NULL;
   m_pbMergeFlag        = NULL;
   m_puhMergeIndex      = NULL;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   t_use1                = NULL;
   t_use2                = NULL;
   t_index               = -1;
@@ -143,7 +143,7 @@ Void TComDataCU::create( ChromaFormat chromaFormatIDC, UInt uiNumPartition, UInt
 
     m_pbMergeFlag        = (Bool*  )xMalloc(Bool,   uiNumPartition);
     m_puhMergeIndex      = (UChar* )xMalloc(UChar,  uiNumPartition);
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
     t_use1                = (UChar* )xMalloc(UChar, uiNumPartition);
     t_use2                = (UChar* )xMalloc(UChar, uiNumPartition);
     t_index               = -1;
@@ -284,7 +284,7 @@ Void TComDataCU::destroy()
       xFree(m_puhMergeIndex);
       m_puhMergeIndex  = NULL;
     }
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
     if (t_use1)
     {
       xFree(t_use1);
@@ -486,7 +486,7 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
   }
   memset( m_pbMergeFlag       , false,                    m_uiNumPartition * sizeof( *m_pbMergeFlag ) );
   memset( m_puhMergeIndex     , 0,                        m_uiNumPartition * sizeof( *m_puhMergeIndex ) );
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   memset( t_use1               , -1,                      m_uiNumPartition * sizeof( *t_use1 ) );
   memset( t_use2               , -1,                      m_uiNumPartition * sizeof( *t_use2 ) );
   t_index = -1;
@@ -588,7 +588,7 @@ Void TComDataCU::initEstData( const UInt uiDepth, const Int qp, const Bool bTran
     m_ChromaQpAdj[ui]   = 0;
     m_pbMergeFlag[ui]   = 0;
     m_puhMergeIndex[ui] = 0;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
     t_use1[ui] = 255;
     t_use2[ui] = 255;
     t_index = -1;
@@ -656,7 +656,7 @@ Void TComDataCU::initSubCU( TComDataCU* pcCU, UInt uiPartUnitIdx, UInt uiDepth, 
   memset( m_phQP,              qp,  sizeInChar );
   memset( m_pbMergeFlag,        0, iSizeInBool  );
   memset( m_puhMergeIndex,      0, iSizeInUchar );
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   memset(t_use1, -1, iSizeInUchar);
   memset(t_use2, -1, iSizeInUchar);
   t_index = -1;
@@ -757,7 +757,7 @@ Void TComDataCU::copySubCU( TComDataCU* pcCU, UInt uiAbsPartIdx )
 
   m_pbMergeFlag         = pcCU->getMergeFlag()        + uiPart;
   m_puhMergeIndex       = pcCU->getMergeIndex()       + uiPart;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   t_use1                = pcCU->getTFlag1() + uiPart;
   t_use2                = pcCU->getTFlag2() + uiPart;
   t_index = -1;
@@ -851,7 +851,7 @@ Void TComDataCU::copyInterPredInfoFrom    ( TComDataCU* pcCU, UInt uiAbsPartIdx,
 
   m_pbMergeFlag        = pcCU->getMergeFlag()             + uiAbsPartIdx;
   m_puhMergeIndex      = pcCU->getMergeIndex()            + uiAbsPartIdx;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   t_use1               = pcCU->getTFlag1()                + uiAbsPartIdx;
   t_use2               = pcCU->getTFlag2()                + uiAbsPartIdx;
   t_index = -1;
@@ -890,7 +890,7 @@ Void TComDataCU::copyPartFrom( TComDataCU* pcCU, UInt uiPartUnitIdx, UInt uiDept
   memcpy( m_CUTransquantBypass + uiOffset, pcCU->getCUTransquantBypass(), sizeof( *m_CUTransquantBypass ) * uiNumPartition );
   memcpy( m_pbMergeFlag         + uiOffset, pcCU->getMergeFlag(),         iSizeInBool  );
   memcpy( m_puhMergeIndex       + uiOffset, pcCU->getMergeIndex(),        iSizeInUchar );
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   memcpy( t_use1   + uiOffset, pcCU->getTFlag1(),       iSizeInUchar );
   memcpy( t_use2   + uiOffset, pcCU->getTFlag2(),       iSizeInUchar );
   t_index = -1;
@@ -979,7 +979,7 @@ Void TComDataCU::copyToPic( UChar uhDepth )
   memcpy( pCtu->getCUTransquantBypass()+ m_absZIdxInCtu, m_CUTransquantBypass, sizeof( *m_CUTransquantBypass ) * m_uiNumPartition );
   memcpy( pCtu->getMergeFlag()         + m_absZIdxInCtu, m_pbMergeFlag,         iSizeInBool  );
   memcpy( pCtu->getMergeIndex()        + m_absZIdxInCtu, m_puhMergeIndex,       iSizeInUchar );
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   memcpy( pCtu->getTFlag1()   + m_absZIdxInCtu, t_use1,       iSizeInUchar );
   memcpy( pCtu->getTFlag2()   + m_absZIdxInCtu, t_use2,       iSizeInUchar );
   t_index = -1;
@@ -1500,7 +1500,7 @@ Void TComDataCU::getIntraDirPredictor( UInt uiAbsPartIdx, Int uiIntraDirPred[NUM
     assert(uiIntraDirPred[i] < 35);
   }
 }
-// #ifdef HYZ_PU_T_MERGE_FLAG
+// #if HYZ_PU_T_MERGE_FLAG
 // UChar*         TComDataCU::getTFlag() {return t_use;}
 // Void          TComDataCU::setTFlag(UInt uiIdx, UChar b) {t_use[uiIdx] = b;}
 // UChar          TComDataCU::getTFlag(UInt idx) {return t_use[idx];}
@@ -1705,7 +1705,7 @@ Void TComDataCU::setQPSubCUs( Int qp, UInt absPartIdx, UInt depth, Bool &foundNo
     }
   }
 }
-// #ifdef HYZ_PU_T_MERGE_FLAG
+// #if HYZ_PU_T_MERGE_FLAG
 // Void          TComDataCU::setTFlagSubParts (UChar skip, UInt absPartIdx, UInt depth)
 // {
 //   const UInt numPart = m_pcPic->getNumPartitionsInCtu() >> (depth << 1);
@@ -1822,7 +1822,7 @@ Void TComDataCU::setSubPart( T uiParameter, T* puhBaseCtu, UInt uiCUAddr, UInt u
       break;
   }
 }
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 Void TComDataCU::setTFlagSubParts1    ( UInt uiMergeIndex, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth )
 {
   setSubPart<UChar>( uiMergeIndex, t_use1, uiAbsPartIdx, uiDepth, uiPartIdx );
@@ -2215,7 +2215,7 @@ Bool TComDataCU::hasEqualMotion( UInt uiAbsPartIdx, const TComDataCU* pcCandCU, 
 }
 
 //! Construct a list of merging candidates, this is used in the merge mode, and I believe that we will see the rerscale function here .iku 20
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMvFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx )
 #else
 Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMvFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx ) const
@@ -2442,7 +2442,7 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     }
 
     iRefIdx = 0;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 	Int get_temporal_flag = 0;
 #endif
     Bool bExistMV = false;
@@ -2459,13 +2459,13 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     {
       dir |= 1;
       pcMvFieldNeighbours[ 2 * uiArrayAddr ].setMvField( cColMv, iRefIdx );// !!!!! cColMv is the temporal mv, and here we set it to our array, hence uiArrayAddr is just what we need to record, because it is the index of TMV! .iku 521
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 	  get_temporal_flag = 1;
 #endif
 	}// But now the problem is how to transport this number to the outer?
     // If it is B frame, we need to find in list(according to CSDN, but what is so called 'list'?) .iku 521
 
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
     // Now assume that we only have P slice, so we don't have to consider the next if block!
     // And here we will capture the index of the temporal index!
     // But what was it? we can see that it is just the uiArrayAddr!
@@ -2677,7 +2677,7 @@ Void TComDataCU::getPartPosition( UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int
  * \param iRefIdx
  * \param pInfo
  */
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo )
 #else
 Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo ) const
@@ -2757,7 +2757,7 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
       pInfo->iN = 1;
     }
   }
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   Int get_temporal_flag = 0;
 #endif
   if (pInfo->iN < AMVP_MAX_NUM_CANDS && getSlice()->getEnableTMVPFlag() )
@@ -2804,7 +2804,7 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
     if ( ctuRsAddr >= 0 && xGetColMVP( eRefPicList, ctuRsAddr, absPartAddr, cColMv, refIdx_Col ) )
     {
       pInfo->m_acMvCand[pInfo->iN++] = cColMv;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 	  get_temporal_flag = 1;
 #endif
     }
@@ -2815,14 +2815,14 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
       if (xGetColMVP( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col ))
       {
         pInfo->m_acMvCand[pInfo->iN++] = cColMv;
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 		get_temporal_flag = 1;
 #endif
       }
     }
     //----  co-located RightBottom Temporal Predictor  ---//
   }
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 // In a word, above we use the xGetColMVP function to get the temporal MV, and hence we can write it~
   if (get_temporal_flag == 0)
   {
@@ -3056,7 +3056,7 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
         else
         {
           const Int neibRefPOC = neibCU->getSlice()->getRefPOC( eRefPicListIndex, neibRefIdx );
-#ifdef HYZ_OF_FRAME
+#if HYZ_OF_FRAME
 		  Float* scales = new Float(3);
 		  xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC, &scales);// That is where the scaleFactor is called .iku 521
 		  rcMv = cMvPred.scaleMv(scales[0], scales[1],  scales[2]);
@@ -3069,7 +3069,7 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
           }
           else
           {
-#ifdef HYZ_NO_SCALE
+#if HYZ_NO_SCALE
 			  rcMv = cMvPred;
 #else
 			  rcMv = cMvPred.scaleMv(scale);
@@ -3171,7 +3171,7 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
     const Int colRefPOC  = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
 #endif
     const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
-#ifdef HYZ_OF_FRAME
+#if HYZ_OF_FRAME
 	Float* scales = new Float(3);
 	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, &scales);// That is where the scaleFactor is called .iku 521
 	rcMv = cColMv.scaleMv(scales[0], scales[1], scales[2]);
@@ -3184,7 +3184,7 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
     }
     else
     {
-#ifdef HYZ_NO_SCALE
+#if HYZ_NO_SCALE
 		rcMv = cColMv;
 #else
 		rcMv = cColMv.scaleMv(scale);
@@ -3197,7 +3197,7 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
   return true;
 }
 
-#ifdef HYZ_OF_FRAME
+#if HYZ_OF_FRAME
 int QQ(Float a)
 {
 	if (a < 0.0)
@@ -3245,18 +3245,18 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 	
 	/*scales[0] = Float(QQ(FxCur)) / Float(QQ(FxCol));
 	scales[1] = Float(QQ(FyCur)) / Float(QQ(FyCol));*/
-#ifdef HYZ_UP_INT
+#if HYZ_UP_INT
 	scales[0] = QQ(abs(FxCur / FxCol));
 	scales[1] = QQ(abs(FyCur / FyCol));
 #else
 	scales[0] = abs(FxCur / FxCol);
 	scales[1] = abs(FyCur / FyCol);
 	scales[2] = iScale;
-	if (scales[0] < hm)
+	if (scales[0] <  hm)
 	{
 		scales[0] = hm;
 	}
-	if (scales[1] < hm)
+	if (scales[1] <  hm)
 	{
 		scales[1] = hm;
 	}

@@ -158,8 +158,8 @@ public:
   }
 
   
-#ifdef HYZ_OF_FRAME
-#ifdef HYZ_OF_ONE_DIR
+#if HYZ_OF_FRAME
+#if HYZ_OF_ONE_DIR
   const TComMv scaleMv(Int iScale) const
   {
 	  Int mvx = iScale * getHor();
@@ -176,7 +176,13 @@ public:
 	  Int iScale = (Int)ori;
 	  Int mvx2 = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
 	  Int mvy2 = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
-	  std::cout << mvx << " VS: " << mvx2 << "  " << mvy << " VS: " << mvy2 << endl;
+	  if (iScale == 4096)
+	  {
+		  mvx2 = getHor();
+		  mvy2 = getVer();
+	  }
+	  
+	  //std::cout << mvx << " VS: " << mvx2 << "  " << mvy << " VS: " << mvy2 << std::endl;
 	  return TComMv(mvx, mvy);
   }
 #endif

@@ -3425,7 +3425,7 @@ Void TEncSearch::xEstimateMvPredAMVP( TComDataCU* pcCU, TComYuv* pcOrgYuv, UInt 
 
   pcCU->getPartIndexAndSize( uiPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
 
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
   // OK! we now now in LDB, the eRefPicList will always be the REF_PIC_LIST_0!!!!!!!!!!!!!!!!!!!!!!!!
   pcCU->t_index = -1;
   // Fill the MV Candidates

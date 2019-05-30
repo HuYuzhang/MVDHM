@@ -1300,7 +1300,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   UChar uhDepth = rpcTempCU->getDepth( 0 );
   rpcTempCU->setPartSizeSubParts( SIZE_2Nx2N, 0, uhDepth ); // interprets depth relative to CTU level
 
-#ifdef HYZ_PU_T_MERGE_FLAG
+#if HYZ_PU_T_MERGE_FLAG
 // With our modification to the code, we now get our time index
 // So here, we have to decide which candidate come from the T
   rpcTempCU->t_index = -1;

@@ -275,7 +275,7 @@ Void TComPicYuv::extendPicBorder ()
   m_bIsBorderExtended = true;
 }
 
-#ifdef HYZ_OF_FRAME
+#if HYZ_OF_FRAME
 Void  TComPicYuv::dump2(UChar* p, const BitDepths &bitDepths)
 {
 

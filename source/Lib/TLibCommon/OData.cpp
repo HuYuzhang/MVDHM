@@ -10,6 +10,9 @@ OData::OData()
 	POCs.clear();
 	POCs.push_back(0);
 	prevPOC = 0;
+	poc2flow.clear();
+	ofMaps.clear();
+	poc2prev.clear();
 }
 
 OData::OData(UInt len)
@@ -31,6 +34,9 @@ OData::OData(UInt len)
 	Ox[0] = 0.0;
 	Oy[0] = 0.0;
 	avaFlag[0] = 1;
+	poc2flow.clear();
+	ofMaps.clear();
+	poc2prev.clear();
 }
 
 OData::~OData()
@@ -112,4 +118,12 @@ Void OData::set(UInt curPOC, Float x, Float y)
 Int OData::getPrevPOC()
 {
 	return this->prevPOC;
+}
+
+Void OData::updateMap(Int curPOC, cv::Mat_<float>* ofMap)
+{
+	ofMaps.push_back(ofMap->clone());
+	poc2prev.insert(std::pair<Int, Int>(curPOC, this->prevPOC));
+	poc2flow.insert(std::pair<Int, Int>(curPOC, ofMaps.size() - 1));// We can use the index to get the ofMaps
+	this->prevPOC = curPOC;
 }
