@@ -3061,6 +3061,16 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 		  xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC, &scales);// That is where the scaleFactor is called .iku 521
 		  rcMv = cMvPred.scaleMv(scales[0], scales[1],  scales[2]);
 		  //delete[] scales;
+#elif HYZ_OF_CTU
+		  const Int scale      = xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
+		  if ( scale == 4096 )
+		  {
+			  rcMv = cMvPred;
+		  }
+		  else
+		  {
+			  rcMv = cMvPred.scaleMv(scale);
+		  }
 #else
 		  const Int scale      = xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
 		  if ( scale == 4096 )
@@ -3096,6 +3106,7 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
   {
     return false;
   }
+  pColPic->getCtu(ctuRsAddr);
   const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
   const TComSlice * const pColSlice = pColDpbCtu->getSlice();
   if(pColDpbCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
@@ -3122,7 +3133,12 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 #else
   Int iColRefIdx            = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
 #endif
-
+#if HYZ_VERBOSE
+  if (iColRefIdx != 0)
+  {
+	  cout << "TComDataCU.cpp:3138 " << iColRefIdx << endl;
+  }
+#endif
   if (iColRefIdx < 0 )
   {
     eColRefPicList = RefPicList(1 - eColRefPicList);
@@ -3176,6 +3192,16 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, &scales);// That is where the scaleFactor is called .iku 521
 	rcMv = cColMv.scaleMv(scales[0], scales[1], scales[2]);
 	//delete[] scales;
+#elif HYZ_OF_CTU
+	const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+	if ( scale == 4096 )
+	{
+		rcMv = cColMv;
+	}
+	else
+	{
+		rcMv = cColMv.scaleMv(scale);
+	}
 #else
     const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
     if ( scale == 4096 )
@@ -3281,8 +3307,61 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 	}
 
 }
+#elif HYZ_OF_CTU
+//Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, Int curX, Int curY, Int colX, Int colY)
+//{
+//	// Right now we don't optimize it...
+//	cv::Mat curOF = globalOData.getMap(iCurrPOC, iCurrRefPOC);
+//	cv::Mat colOF = globalOData.getMap(iColPOC, iColRefPOC);
+//
+//	// Below part is for calculate the HM scale, final result is in the hm(variable)
+//	Int iDiffPocD = iColPOC - iColRefPOC;
+//	Int iDiffPocB = iCurrPOC - iCurrRefPOC;
+//	Int iScale;
+//	Float ret;
+//	if( iDiffPocD == iDiffPocB )
+//	{
+//		iScale = 4096;
+//	}
+//	else
+//	{// we need to be careful  that if iDiffPocD and iDiffPocB is 4 and 8, then we won't return 2, but 128... this number will be recalculate in cColMv.scaleMv
+//		Int iTDB      = Clip3( -128, 127, iDiffPocB );
+//		Int iTDD      = Clip3( -128, 127, iDiffPocD );
+//		Int iX        = (0x4000 + abs(iTDD/2)) / iTDD;
+//		iScale    = Clip3( -4096, 4095, (iTDB * iX + 32) >> 6 );
+//	}
+//	if (iScale == 4096)
+//	{
+//		ret = 20.0;
+//	}
+//	else{ ret = Clip3(-32768, 32767, (iScale * 20 + 127 + (iScale * 20 < 0)) >> 8); }
+//	Float hm = (Float)(ret) / 20.0;
+//
+//
+//	Float curAvgX = 0.0, curAvgY = 0.0, colAvgX = 0.0, colAvgY = 0.0;
+//	for (UInt i = curX; i < curX + 64; ++i)
+//	{
+//		for (UInt j = curY; j < curY + 64; ++)
+//	}
+//}
+Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
+{
+	Int iDiffPocD = iColPOC - iColRefPOC;
+	Int iDiffPocB = iCurrPOC - iCurrRefPOC;
 
-
+	if( iDiffPocD == iDiffPocB )
+	{
+		return 4096;
+	}
+	else
+	{// we need to be careful  that if iDiffPocD and iDiffPocB is 4 and 8, then we won't return 2, but 128... this number will be recalculate in cColMv.scaleMv
+		Int iTDB      = Clip3( -128, 127, iDiffPocB );
+		Int iTDD      = Clip3( -128, 127, iDiffPocD );
+		Int iX        = (0x4000 + abs(iTDD/2)) / iTDD;
+		Int iScale    = Clip3( -4096, 4095, (iTDB * iX + 32) >> 6 );
+		return iScale;
+	}
+}
 #else
 // Static member
 Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)

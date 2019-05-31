@@ -81,7 +81,7 @@ private:
   Bool  m_bIsBorderExtended;
 
 public:
-#if HYZ_OF_FRAME
+#if HYZ_OF_FRAME | HYZ_OF_CTU
 	Void          dump2(UChar* p, const BitDepths &bitDepths);
 #endif
                TComPicYuv         ();

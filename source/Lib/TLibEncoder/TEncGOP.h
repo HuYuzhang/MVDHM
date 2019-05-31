@@ -64,7 +64,7 @@
 #include "TLibCommon/hyz.h"
 
 #include "../Lib/TLibCommon/OData.h"
-#if HYZ_OF_FRAME
+#if HYZ_OF_FRAME | HYZ_OF_CTU
 #include <opencv2\core\core.hpp>
 #include <opencv2\opencv.hpp>
 #include <opencv2\imgproc\imgproc.hpp>

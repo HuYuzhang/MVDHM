@@ -9,6 +9,14 @@
 #include <opencv2\imgproc\imgproc.hpp>
 #define X_DIR 0
 #define Y_DIR 1
+typedef cv::Mat OFMap;
+struct OFInfo
+{
+	Int prevPOC;
+	Int opIndex;
+	Int curPOC;
+	Int curIndex;
+};
 class OData
 {
 private:
@@ -20,7 +28,9 @@ private:
 	Int prevPOC;
 	std::map<Int, Int> poc2flow;// This map the POC to the optial map's index
 	std::map<Int, Int> poc2prev;
-	std::vector<cv::Mat_<float>> ofMaps;// Each time we calcute a new optical flow, we will push it back to this vector
+	std::vector<cv::Mat> ofMaps;// Each time we calcute a new optical flow, we will push it back to this vector
+	std::map<UInt, OFInfo> poc2info;
+	
 public:
 	OData();
 	OData(UInt len);
@@ -28,7 +38,10 @@ public:
 	Float query(UInt idSrc, UInt idDst, UInt dir);
 	Void set(UInt curPOC, Float x, Float y);
 	Int getPrevPOC();
-	Void updateMap(Int curPOC, cv::Mat_<float>* ofMap);
+	Void updateMap(Int curPOC, cv::Mat ofMap);
+	OFMap getMap(Int curPOC, Int colPOC);
+	UInt picH, picW;
+	std::vector<int> shapes;
 };
 
 #endif

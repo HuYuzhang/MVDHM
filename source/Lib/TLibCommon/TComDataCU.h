@@ -51,7 +51,11 @@
 #include "hyz.h"
 //! \ingroup TLibCommon
 //! \{
-
+#if HYZ_OF_FRAME | HYZ_OF_CTU
+#include <opencv2\core\core.hpp>
+#include <opencv2\opencv.hpp>
+#include <opencv2\imgproc\imgproc.hpp>
+#endif
 class TComTU; // forward declaration
 
 static const UInt NUM_MOST_PROBABLE_MODES=3;
@@ -165,6 +169,10 @@ protected:
   /// compute scaling factor from POC difference
 #if HYZ_OF_FRAME
   static Void    xGetDistScaleFactor( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, Float** p );
+#elif HYZ_OF_CTU
+  // We have to provide the two (X,Y) pairs, which is the position of the two CTU
+  //static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC,  Int curX, Int curY, Int colX, Int colY);
+  static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
 #else
   static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
 #endif

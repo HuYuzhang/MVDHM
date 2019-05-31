@@ -1674,6 +1674,8 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 	  Int curPOC = pcPic->getPOC();
 	  std::string fileName = std::to_string(curPOC) + ".png";
 	  cv::imwrite(fileName, rgbImg);
+	  globalOData.picH = height;
+	  globalOData.picW = width;
 	  if (curPOC != 0)// For POC 0, we have to way to calculate its optical flow~
 	  {
 		  std::string dstName = std::to_string(globalOData.getPrevPOC()) + ".png ";
@@ -1734,26 +1736,64 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 		  }
 		  _pclose(fp);
 		  Float Fx, Fy;
-		  // Then we should use the optical file to store
-		  std:string xFlowName = "x.flow";
-		  std:string yFlowName = "y.flow";
+		  //Then we should use the optical file to store
+		  string xFlowName = "x.flow";
+		  string yFlowName = "y.flow";
 		  std::ifstream xFin(xFlowName);
 		  std::ifstream yFin(yFlowName);
-		  cv::Mat_<float> opMap = cv::Mat(height, width, CV_32FC3, cv::Scalar(0));// In fact we only use the first channel
+		  cv::Mat opMap = cv::Mat(height, width, CV_32FC3, cv::Scalar(0));// In fact we only use the first channel
 		  for (UInt i = 0; i < height; ++i)
 		  {
 			  for (UInt j = 0; j < width; ++j)
 			  {
 				  xFin >> Fx;
 				  yFin >> Fy;
-				  opMap(i, j, 0) = Fx;
-				  opMap(i, j, 1) = Fy;
+				  opMap.at<cv::Vec3f>(i, j)[0] = Fx;
+				  opMap.at<cv::Vec3f>(i, j)[1] = Fy;
 			  }
 		  }
 		  xFin.close();
 		  yFin.close();
+		  Int tmpPrev = globalOData.getPrevPOC();
 		  // Then we shoud add this optical data to the OData
-		  globalOData.updateMap(curPOC, &opMap);// OK, here we finish update the optical map
+		  globalOData.updateMap(curPOC, opMap);// OK, here we finish update the optical map
+		  // Below is for test insert and query
+#if HYZ_DUMP_OF
+		  cv::Mat tmpM = globalOData.getMap(0, curPOC);
+		  cv::Mat dumpMap = cv::Mat(height, width, CV_32FC3, cv::Scalar(100, 100, 100));
+		  cv::scaleAdd(tmpM, 2.0, dumpMap, dumpMap);
+		  cv::Mat dumpOK = cv::Mat(height, width, CV_8UC1);
+		  for (UInt i = 0; i < height; ++i)
+		  {
+			  for (UInt j = 0; j < width; ++j)
+			  {
+
+				  dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[0];
+				  /*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+				  cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+			  }
+		  }
+		  cv::imwrite("op/" + to_string(curPOC) + "dumpX.png", dumpOK);
+		  for (UInt i = 0; i < height; ++i)
+		  {
+			  for (UInt j = 0; j < width; ++j)
+			  {
+
+				  dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[1];
+				  /*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+				  cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+			  }
+		  }
+		  cv::imwrite("op/" + to_string(curPOC) + "dumpY.png", dumpOK);
+#endif
+	  }
+	  else
+	  {
+		  globalOData.shapes.push_back(height);
+		  globalOData.shapes.push_back(width);
+		  globalOData.shapes.push_back(3);
+		  globalOData.picH = height;
+		  globalOData.picW = width;
 	  }
 #endif
     // now compress (trial encode) the various slice segments (slices, and dependent slices)

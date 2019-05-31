@@ -77,3 +77,19 @@ with open("opt.log", 'w') as f:
     f.write(str(np.mean(pred_labels[0][:,:,1])))
     f.close()
 
+x_flow = pred_labels[0][:,:,0]
+y_flow = pred_labels[0][:,:,1]
+# import IPython
+# IPython.embed()
+# below we will write the optical flow data to the .flow file
+with open('x.flow', 'w') as f:
+    for i in range(x_flow.shape[0]):
+        for j in range(x_flow.shape[1]):
+            f.write(str(x_flow[i,j]) + ' ')
+        f.write('\n')
+
+with open('y.flow', 'w') as f:
+    for i in range(y_flow.shape[0]):
+        for j in range(y_flow.shape[1]):
+            f.write(str(y_flow[i,j]) + ' ')
+        f.write('\n')

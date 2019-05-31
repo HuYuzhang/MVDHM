@@ -186,6 +186,13 @@ public:
 	  return TComMv(mvx, mvy);
   }
 #endif
+#elif HYZ_OF_CTU
+  const TComMv scaleMv(Int iScale) const
+  {
+	  Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	  return TComMv(mvx, mvy);
+  }
 #else
   const TComMv scaleMv(Int iScale) const
   {

@@ -13,6 +13,15 @@ OData::OData()
 	poc2flow.clear();
 	ofMaps.clear();
 	poc2prev.clear();
+	poc2info.clear();
+	
+	prevPOC = 0;
+	OFInfo tmp;
+	tmp.curPOC = 0;
+	tmp.prevPOC = -1;
+	tmp.curIndex = 0;
+	tmp.opIndex = -1;
+	poc2info.insert(std::pair<Int, OFInfo>(0, tmp));
 }
 
 OData::OData(UInt len)
@@ -37,12 +46,21 @@ OData::OData(UInt len)
 	poc2flow.clear();
 	ofMaps.clear();
 	poc2prev.clear();
+	poc2info.clear();
+	
+	prevPOC = 0;
+	OFInfo tmp;
+	tmp.curPOC = 0;
+	tmp.prevPOC = -1;
+	tmp.curIndex = 0;
+	tmp.opIndex = -1;
+	poc2info.insert(std::pair<Int, OFInfo>(0, tmp));
 }
 
 OData::~OData()
 {
 }
-
+// should not be used, for its poor performance
 Float OData::query(UInt idSrc, UInt idDst, UInt dir)
 {
 	UInt cur_len = Ox.size();
@@ -119,11 +137,96 @@ Int OData::getPrevPOC()
 {
 	return this->prevPOC;
 }
-
-Void OData::updateMap(Int curPOC, cv::Mat_<float>* ofMap)
+// should not be used, for its poor performance
+Void OData::updateMap(Int curPOC, cv::Mat ofMap)
 {
-	ofMaps.push_back(ofMap->clone());
-	poc2prev.insert(std::pair<Int, Int>(curPOC, this->prevPOC));
-	poc2flow.insert(std::pair<Int, Int>(curPOC, ofMaps.size() - 1));// We can use the index to get the ofMaps
+	
+	/*poc2prev.insert(std::pair<Int, Int>(curPOC, this->prevPOC));
+	poc2flow.insert(std::pair<Int, Int>(curPOC, ofMaps.size() - 1));*/// We can use the index to get the ofMaps
+	OFInfo tmp;
+	tmp.curPOC = curPOC;
+	tmp.prevPOC = this->prevPOC;
+	tmp.curIndex = poc2info.size();
+	tmp.opIndex = ofMaps.size();
+	ofMaps.push_back(ofMap.clone());
+	poc2info.insert(std::pair<Int, OFInfo>(curPOC, tmp));
 	this->prevPOC = curPOC;
+}
+
+OFMap OData::getMap(Int curPOC, Int colPOC)
+{
+	//// We have to desice which is the first encoded frames
+	//// frist we have to get frame-level OF map between the two frames
+	//Int tmpPrev = poc2prev[curPOC];
+	//Int early = -1;
+	//Int late = -1;
+	//while (1)
+	//{
+	//	if (tmpPrev == colPOC)
+	//	{
+	//		early = colPOC;
+	//		late = curPOC;
+	//		break;
+	//	}
+	//	if (tmpPrev == 0)
+	//	{
+	//		break;
+	//	}
+	//	tmpPrev = poc2prev[tmpPrev];
+	//}
+	//if (early == -1 && late == -1)// We have to keep seeking
+	//{
+	//	tmpPrev = poc2prev[colPOC];
+	//	while (1)
+	//	{
+	//		if (tmpPrev == curPOC)
+	//		{
+	//			early = curPOC;
+	//			late = colPOC;
+	//			break;
+	//		}
+	//		if (tmpPrev == 0)
+	//		{
+	//			break;
+	//		}
+	//		tmpPrev = poc2prev[tmpPrev];
+	//	}
+	//}
+	//assert(early != -1 && late != -1);
+	//// Then we get the POC index and then begin to conduct a OFMap from early to late
+	//tmpPrev = poc2prev[late];
+	//UInt mapIndex = poc2flow[late];
+	//OFMap opMap = ofMaps[mapIndex].clone();
+
+	//while (tmpPrev != early)
+	//{
+
+	//}
+	assert(curPOC != colPOC);
+	OFInfo cur = poc2info[curPOC];
+	OFInfo col = poc2info[colPOC];
+	Int early = -1, late = -1;
+	if (cur.curIndex < col.curIndex)
+	{
+		early = curPOC;
+		late = colPOC;
+	}
+	else
+	{
+		early = colPOC;
+		late = curPOC;
+	}
+	assert(early != -1 && late != -1);
+	OFInfo tmpinfo = poc2info[late];
+	cv::Mat sum = cv::Mat(picH, picW, CV_32FC3, cv::Scalar(0));
+	while (tmpinfo.curPOC != early)
+	{
+		cv::add(sum, ofMaps[tmpinfo.opIndex], sum);
+		tmpinfo = poc2info[tmpinfo.prevPOC];
+	}
+	if (cur.curIndex < col.curIndex)
+	{
+		sum = -sum;
+	}
+	return sum;
 }
