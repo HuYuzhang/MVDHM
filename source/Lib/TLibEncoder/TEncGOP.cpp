@@ -1759,7 +1759,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 		  globalOData.updateMap(curPOC, opMap);// OK, here we finish update the optical map
 		  // Below is for test insert and query
 #if HYZ_DUMP_OF
-		  cv::Mat tmpM = globalOData.getMap(0, curPOC);
+		  cv::Mat tmpM = globalOData.getMap(curPOC, 0);
 		  cv::Mat dumpMap = cv::Mat(height, width, CV_32FC3, cv::Scalar(100, 100, 100));
 		  cv::scaleAdd(tmpM, 2.0, dumpMap, dumpMap);
 		  cv::Mat dumpOK = cv::Mat(height, width, CV_8UC1);

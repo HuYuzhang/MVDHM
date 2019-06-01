@@ -153,7 +153,7 @@ Void OData::updateMap(Int curPOC, cv::Mat ofMap)
 	this->prevPOC = curPOC;
 }
 
-OFMap OData::getMap(Int curPOC, Int colPOC)
+OFMap OData::getMap(Int curPOC, Int colPOC)// I find that the name for the param is not precise...it should be curRefPOC! rather than colPOC
 {
 	//// We have to desice which is the first encoded frames
 	//// frist we have to get frame-level OF map between the two frames
@@ -203,9 +203,11 @@ OFMap OData::getMap(Int curPOC, Int colPOC)
 
 	//}
 	assert(curPOC != colPOC);
+	
 	OFInfo cur = poc2info[curPOC];
 	OFInfo col = poc2info[colPOC];
 	Int early = -1, late = -1;
+	assert(cur.curIndex > col.curIndex);
 	if (cur.curIndex < col.curIndex)
 	{
 		early = curPOC;
@@ -216,17 +218,101 @@ OFMap OData::getMap(Int curPOC, Int colPOC)
 		early = colPOC;
 		late = curPOC;
 	}
+	
 	assert(early != -1 && late != -1);
-	OFInfo tmpinfo = poc2info[late];
-	cv::Mat sum = cv::Mat(picH, picW, CV_32FC3, cv::Scalar(0));
-	while (tmpinfo.curPOC != early)
+	// Begin the buffer
+	cv::Mat buffer;
+	if (mapBuffer.find(late) != mapBuffer.end()  && mapBuffer[late].find(early) != mapBuffer[late].end())
 	{
-		cv::add(sum, ofMaps[tmpinfo.opIndex], sum);
-		tmpinfo = poc2info[tmpinfo.prevPOC];
+		buffer= mapBuffer[late][early];
+		if (cur.curIndex < col.curIndex)
+		{
+			return -buffer;
+		}
+		else
+		{
+			return buffer;
+		}
 	}
-	if (cur.curIndex < col.curIndex)
+	else
 	{
-		sum = -sum;
+		// Finish the buffer, if no, we will calculate it and then buffer it
+		OFInfo tmpinfo = poc2info[late];
+		cv::Mat sum = cv::Mat(picH, picW, CV_32FC3, cv::Scalar(0));
+		while (tmpinfo.curPOC != early)
+		{
+			cv::add(sum, ofMaps[tmpinfo.opIndex], sum);
+			tmpinfo = poc2info[tmpinfo.prevPOC];
+		}
+		// Begin to buffer the map
+		mapBuffer[late][early] = sum;
+		// What's more, we should also update the avgBuffer
+		Float* px = mynew<Float>(ctuPerFrame);
+		Float* py = mynew<Float>(ctuPerFrame);
+		Int* ip = mynew<Int>(ctuPerFrame);
+		avgBufferX[late][early] = px;
+		avgBufferY[late][early] = py;
+		avgFlag[late][early] = ip;
+		// Now begin to calculate the average flow of each CTU
+		// End the buffering
+		if (cur.curIndex < col.curIndex)
+		{
+			sum = -sum;
+		}
+
+		return sum;
 	}
-	return sum;
+}
+Void OData::ODDump(cv::Mat tmpM)
+{
+
+	cv::Mat dumpMap = cv::Mat(picH, picW, CV_32FC3, cv::Scalar(100, 100, 100));
+	cv::scaleAdd(tmpM, 5.0, dumpMap, dumpMap);
+	cv::Mat dumpOK = cv::Mat(picH, picW, CV_8UC1);
+	for (UInt i = 0; i < picH; ++i)
+	{
+		for (UInt j = 0; j < picW; ++j)
+		{
+
+			dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[0];
+			/*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+			cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+		}
+	}
+	cv::imwrite("ODDump/dumpX.png", dumpOK);
+}
+
+template<typename T>T** OData::mynew(UInt a, UInt b)
+{
+	T** ret = new T*[a];
+	for (int i = 0; i < a; ++i)
+	{
+		for (int j = 0; j < b; ++j)
+		{
+			ret[i] = new T[b];
+			memset(ret[i], 0, b * sizeof(T));
+		}
+	}
+	return ret;
+}
+template<typename T>Void OData::mydelete(T** p, UInt a, UInt b)
+{
+	for (int i = 0; i < a; ++i)
+	{
+		for (int j = 0; j < b; ++j)
+		{
+			delete[] p[a];
+		}
+	}
+	delete[]p;
+}
+template<typename T>T* OData::mynew(UInt a)
+{
+	T* ret = new T[a];
+	memset(ret, 0, a * sizeof(T));
+	return ret;
+}
+template<typename T>Void OData::mydelete(T* p, UInt a)
+{
+	delete[]p;
 }

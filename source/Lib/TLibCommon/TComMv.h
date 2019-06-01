@@ -46,7 +46,7 @@
 // ====================================================================================================================
 // Class definition
 // ====================================================================================================================
-
+//extern OData globalOData;
 /// basic motion vector class
 class TComMv
 {
@@ -187,10 +187,12 @@ public:
   }
 #endif
 #elif HYZ_OF_CTU
-  const TComMv scaleMv(Int iScale) const
+  const TComMv scaleMv(Float hm, Float x, Float y) const
   {
-	  Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	  /*Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);*/
+	  Int mvx = Int((Float)getHor() * x);
+	  Int mvy = Int((Float)getVer() * y);
 	  return TComMv(mvx, mvy);
   }
 #else

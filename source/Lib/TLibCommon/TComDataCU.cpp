@@ -2405,7 +2405,7 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
   if ( getSlice()->getEnableTMVPFlag() )
   {
     //>> MTK colocated-RightBottom
-    UInt uiPartIdxRB;
+	  UInt uiPartIdxRB; 
 
     deriveRightBottomIdx( uiPUIdx, uiPartIdxRB );
 
@@ -2440,7 +2440,11 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
         uiAbsPartAddr = 0;
       }
     }
-
+#if HYZ_VERBOSE
+	/*cout << numPartInCtuWidth << " " << numPartInCtuHeight << endl;*/
+	// Here uiPartIdxRB is the abs value, not 0/1
+	printf("%d %d %d %d\n", m_ctuRsAddr, g_auiRasterToZscan[m_ctuRsAddr], m_absZIdxInCtu);
+#endif
     iRefIdx = 0;
 #if HYZ_PU_T_MERGE_FLAG
 	Int get_temporal_flag = 0;
@@ -3062,16 +3066,27 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 		  rcMv = cMvPred.scaleMv(scales[0], scales[1],  scales[2]);
 		  //delete[] scales;
 #elif HYZ_OF_CTU
-		  const Int scale      = xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
-		  if ( scale == 4096 )
-		  {
-			  rcMv = cMvPred;
-		  }
-		  else
-		  {
-			  rcMv = cMvPred.scaleMv(scale);
-		  }
+		  const TComPic* pcPic = this->getPic();
+		  const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
+		  const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
+
+		  globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		  globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		  globalOData.colX = (neibCU->getCtuRsAddr() % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		  globalOData.colY = (neibCU->getCtuRsAddr() / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		  xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
+		  globalOData.curCTU = m_ctuRsAddr;
+		  globalOData.colCTU = neibCU->getCtuRsAddr();
+		  rcMv = cMvPred.scaleMv(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
+		  
 #else
+#if HYZ_DEBUG_CTU
+		  // currPOC must equal to neibPOC, but currRefPOC might differ from neibRefPOC!!
+		  if (currPOC != neibPOC /*|| currRefPOC != neibRefPOC*/)
+		  {
+			  printf("%d %d %d %d\n", currPOC, neibPOC, currRefPOC, neibRefPOC);
+		  }
+#endif
 		  const Int scale      = xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
 		  if ( scale == 4096 )
           {
@@ -3106,7 +3121,7 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
   {
     return false;
   }
-  pColPic->getCtu(ctuRsAddr);
+
   const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
   const TComSlice * const pColSlice = pColDpbCtu->getSlice();
   if(pColDpbCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
@@ -3133,12 +3148,7 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 #else
   Int iColRefIdx            = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
 #endif
-#if HYZ_VERBOSE
-  if (iColRefIdx != 0)
-  {
-	  cout << "TComDataCU.cpp:3138 " << iColRefIdx << endl;
-  }
-#endif
+
   if (iColRefIdx < 0 )
   {
     eColRefPicList = RefPicList(1 - eColRefPicList);
@@ -3193,15 +3203,25 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 	rcMv = cColMv.scaleMv(scales[0], scales[1], scales[2]);
 	//delete[] scales;
 #elif HYZ_OF_CTU
-	const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
-	if ( scale == 4096 )
-	{
-		rcMv = cColMv;
-	}
-	else
-	{
-		rcMv = cColMv.scaleMv(scale);
-	}
+	//const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, this, m_ctuRsAddr, ctuRsAddr);
+	// we should prepare for the curXY, colXY
+	const TComPic* pcPic = this->getPic();
+	const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
+	const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
+
+	globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+	globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+	globalOData.colX = (ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+	globalOData.colY = (ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+	globalOData.curCTU = m_ctuRsAddr;
+	globalOData.colCTU = ctuRsAddr;
+	//globalOData.curX = this->getCUPelX();
+	//globalOData.curY = this->getCUPelY();
+	//globalOData.colX = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelX();
+	//globalOData.colY = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelY();
+	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+
+	rcMv = cColMv.scaleMv(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
 #else
     const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
     if ( scale == 4096 )
@@ -3308,60 +3328,166 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 
 }
 #elif HYZ_OF_CTU
-//Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, Int curX, Int curY, Int colX, Int colY)
+//Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, const TComDataCU* curP = NULL, Int curCTU, Int colCTU)
+Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
+{
+	// Below part is for calculate the HM scale, final result is in the hm(variable)
+	Int iDiffPocD = iColPOC - iColRefPOC;
+	Int iDiffPocB = iCurrPOC - iCurrRefPOC;
+	Int iScale;
+	Float ret;
+	if (iDiffPocD == iDiffPocB)
+	{
+		iScale = 4096;
+		//return iScale;
+	}
+	else
+	{// we need to be careful  that if iDiffPocD and iDiffPocB is 4 and 8, then we won't return 2, but 128... this number will be recalculate in cColMv.scaleMv
+		Int iTDB = Clip3(-128, 127, iDiffPocB);
+		Int iTDD = Clip3(-128, 127, iDiffPocD);
+		Int iX = (0x4000 + abs(iTDD / 2)) / iTDD;
+		iScale = Clip3(-4096, 4095, (iTDB * iX + 32) >> 6);
+		//return iScale;
+	}
+	if (iScale == 4096)
+	{
+		ret = 20.0;
+	}
+	else{ ret = (Float)Clip3(-32768, 32767, (iScale * 20 + 127 + (iScale * 20 < 0)) >> 8); }
+	Float hm = (Float)(ret) / (Float)20.0;
+
+
+	// Our main part!
+	Float curAvgX = 0.0, curAvgY = 0.0, colAvgX = 0.0, colAvgY = 0.0;
+	Int Xlow, Ylow, Xup, Yup;
+	OFInfo cur = globalOData.poc2info[iCurrPOC];
+	OFInfo curRef = globalOData.poc2info[iCurrRefPOC];
+	Int early = -1, late = -1;
+	Int factor;
+	if (cur.curIndex < curRef.curIndex)
+	{
+		early = iCurrPOC;
+		late = iCurrRefPOC;
+		factor = -1;
+	}
+	else
+	{
+		early = iCurrRefPOC;
+		late = iCurrPOC;
+		factor = 1;
+	}
+	if (globalOData.avgFlag[late][early][globalOData.curCTU] == 1)
+	{// Just read data from the buffer
+		curAvgX = globalOData.avgBufferX[late][early][globalOData.curCTU] * factor;
+		curAvgY = globalOData.avgBufferY[late][early][globalOData.curCTU] * factor;
+	}
+	else
+	{
+		globalOData.avgFlag[late][early][globalOData.curCTU] = 1;
+		cv::Mat curOF = globalOData.getMap(late, early);
+		Xlow = globalOData.curX;
+		Ylow = globalOData.curY;
+		Xup = globalOData.curX + 64;
+		Yup = globalOData.curY + 64;
+		if (Xup > globalOData.picW)
+		{
+			Xup = globalOData.picW;
+		}
+		if (Yup > globalOData.picH)
+		{
+			Yup = globalOData.picH;
+		}
+		for (UInt i = Xlow; i < Xup; ++i)
+		{
+			for (UInt j = Ylow; j < Yup; ++j)
+			{
+				curAvgX += curOF.at<cv::Vec3f>(j, i)[0];
+				curAvgY += curOF.at<cv::Vec3f>(j, i)[1];
+			}
+		}
+		curAvgX /= ((Xup - Xlow) * (Yup - Ylow));
+		curAvgY /= ((Xup - Xlow) * (Yup - Ylow));
+		globalOData.avgBufferX[late][early][globalOData.curCTU] = curAvgX;
+		globalOData.avgBufferY[late][early][globalOData.curCTU] = curAvgY;
+		curAvgX *= factor;
+		curAvgY *= factor;
+	}
+	
+	// Then check the colData------------------------------------------------------------------
+	OFInfo col = globalOData.poc2info[iColPOC];
+	OFInfo colRef = globalOData.poc2info[iColRefPOC];
+	if (col.curIndex < colRef.curIndex)
+	{
+		early = iColPOC;
+		late = iColRefPOC;
+		factor = -1;
+	}
+	else
+	{
+		early = iColRefPOC;
+		late = iColPOC;
+		factor = 1;
+	}
+	if (globalOData.avgFlag[late][early][globalOData.colCTU] == 1)
+	{// Just read data from the buffer
+		curAvgX = globalOData.avgBufferX[late][early][globalOData.colCTU] * factor;
+		curAvgY = globalOData.avgBufferY[late][early][globalOData.colCTU] * factor;
+	}
+	else
+	{
+		globalOData.avgFlag[late][early][globalOData.colCTU] = 1;
+		cv::Mat colOF = globalOData.getMap(late, early);
+		Xlow = globalOData.colX;
+		Ylow = globalOData.colY;
+		Xup = globalOData.colX + 64;
+		Yup = globalOData.colY + 64;
+		if (Xup > globalOData.picW)
+		{
+			Xup = globalOData.picW;
+		}
+		if (Yup > globalOData.picH)
+		{
+			Yup = globalOData.picH;
+		}
+		for (UInt i = Xlow; i < Xup; ++i)
+		{
+			for (UInt j = Ylow; j < Yup; ++j)
+			{
+				colAvgX += colOF.at<cv::Vec3f>(j, i)[0];
+				colAvgY += colOF.at<cv::Vec3f>(j, i)[1];
+			}
+		}
+		colAvgX /= ((Xup - Xlow) * (Yup - Ylow));
+		colAvgY /= ((Xup - Xlow) * (Yup - Ylow));
+		globalOData.avgBufferX[late][early][globalOData.colCTU] = colAvgX;
+		globalOData.avgBufferY[late][early][globalOData.colCTU] = colAvgY;
+		colAvgX *= factor;
+		colAvgY *= factor;
+	}
+
+	globalOData.XScale = (abs(curAvgX) < 0.5 || abs(colAvgX) < 0.5) ? hm : curAvgX / colAvgX;
+	globalOData.YScale = (abs(curAvgY) < 0.5 || abs(colAvgY) < 0.5) ? hm : curAvgY / colAvgY;
+	globalOData.HMScale = hm;
+	
+}
+//Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
 //{
-//	// Right now we don't optimize it...
-//	cv::Mat curOF = globalOData.getMap(iCurrPOC, iCurrRefPOC);
-//	cv::Mat colOF = globalOData.getMap(iColPOC, iColRefPOC);
-//
-//	// Below part is for calculate the HM scale, final result is in the hm(variable)
 //	Int iDiffPocD = iColPOC - iColRefPOC;
 //	Int iDiffPocB = iCurrPOC - iCurrRefPOC;
-//	Int iScale;
-//	Float ret;
+//
 //	if( iDiffPocD == iDiffPocB )
 //	{
-//		iScale = 4096;
+//		return 4096;
 //	}
 //	else
 //	{// we need to be careful  that if iDiffPocD and iDiffPocB is 4 and 8, then we won't return 2, but 128... this number will be recalculate in cColMv.scaleMv
 //		Int iTDB      = Clip3( -128, 127, iDiffPocB );
 //		Int iTDD      = Clip3( -128, 127, iDiffPocD );
 //		Int iX        = (0x4000 + abs(iTDD/2)) / iTDD;
-//		iScale    = Clip3( -4096, 4095, (iTDB * iX + 32) >> 6 );
-//	}
-//	if (iScale == 4096)
-//	{
-//		ret = 20.0;
-//	}
-//	else{ ret = Clip3(-32768, 32767, (iScale * 20 + 127 + (iScale * 20 < 0)) >> 8); }
-//	Float hm = (Float)(ret) / 20.0;
-//
-//
-//	Float curAvgX = 0.0, curAvgY = 0.0, colAvgX = 0.0, colAvgY = 0.0;
-//	for (UInt i = curX; i < curX + 64; ++i)
-//	{
-//		for (UInt j = curY; j < curY + 64; ++)
+//		Int iScale    = Clip3( -4096, 4095, (iTDB * iX + 32) >> 6 );
+//		return iScale;
 //	}
 //}
-Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
-{
-	Int iDiffPocD = iColPOC - iColRefPOC;
-	Int iDiffPocB = iCurrPOC - iCurrRefPOC;
-
-	if( iDiffPocD == iDiffPocB )
-	{
-		return 4096;
-	}
-	else
-	{// we need to be careful  that if iDiffPocD and iDiffPocB is 4 and 8, then we won't return 2, but 128... this number will be recalculate in cColMv.scaleMv
-		Int iTDB      = Clip3( -128, 127, iDiffPocB );
-		Int iTDD      = Clip3( -128, 127, iDiffPocD );
-		Int iX        = (0x4000 + abs(iTDD/2)) / iTDD;
-		Int iScale    = Clip3( -4096, 4095, (iTDB * iX + 32) >> 6 );
-		return iScale;
-	}
-}
 #else
 // Static member
 Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
