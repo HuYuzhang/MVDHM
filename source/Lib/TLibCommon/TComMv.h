@@ -187,12 +187,20 @@ public:
   }
 #endif
 #elif HYZ_OF_CTU
-  const TComMv scaleMv(Float hm, Float x, Float y) const
+  const TComMv scaleMv(Float hm, Float x, Float y, Int iScale) const
   {
-	  /*Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);*/
 	  Int mvx = Int((Float)getHor() * x);
 	  Int mvy = Int((Float)getVer() * y);
+	  mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	  mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	  
+	  return TComMv(mvx, mvy);
+  }
+  const TComMv scaleMv(Float hm, Float x, Float y) const
+  {
+	  Int mvx = Int((Float)getHor() * x);
+	  Int mvy = Int((Float)getVer() * y);
+	  
 	  return TComMv(mvx, mvy);
   }
 #else

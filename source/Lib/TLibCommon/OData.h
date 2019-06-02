@@ -7,6 +7,8 @@
 #include <opencv2\core\core.hpp>
 #include <opencv2\opencv.hpp>
 #include <opencv2\imgproc\imgproc.hpp>
+#include<iostream>
+#include<fstream>
 #define X_DIR 0
 #define Y_DIR 1
 typedef cv::Mat OFMap;
@@ -36,7 +38,7 @@ public:
 	std::map<Int, Int> poc2flow;// This map the POC to the optial map's index
 	std::map<Int, Int> poc2prev;
 	std::vector<cv::Mat> ofMaps;// Each time we calcute a new optical flow, we will push it back to this vector
-	const Float avgThres = 0.2;
+	const Float avgThres = (Float)1;
 
 
 	OData();
@@ -53,6 +55,9 @@ public:
 	Int curPOC, curRefPOC, colPOC, colRefPOC;
 	Int curCTU, colCTU;
 	Void ODDump(cv::Mat tmpM);
+	Void ODDump(cv::Mat tmpM, std::string fName);
+	Void ODDump(cv::Mat tmpM, std::string fName1, std::string fName2);
+	Void ODDump2(cv::Mat tmpM, std::string fName1, std::string fName2);
 	Float XScale;
 	Float YScale;
 	Float HMScale;

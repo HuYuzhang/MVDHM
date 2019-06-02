@@ -259,6 +259,10 @@ OFMap OData::getMap(Int curPOC, Int colPOC)// I find that the name for the param
 		avgBufferX[late][early] = px;
 		avgBufferY[late][early] = py;
 		avgFlag[late][early] = ip;
+		std::string tail_png = std::to_string(late) + "_" + std::to_string(early) + std::string(".png");
+		std::string tail_txt = std::to_string(late) + "_" + std::to_string(early) + std::string(".txt");
+		//ODDump(sum, std::string("xdiffop/") + tail_png, std::string("ydiffop/") + tail_png);
+		//ODDump2(sum, std::string("xdiffop2/") + tail_txt, std::string("ydiffop2/") + tail_txt);
 		// Now begin to calculate the average flow of each CTU
 		// End the buffering
 		if (cur.curIndex < col.curIndex)
@@ -288,16 +292,71 @@ Void OData::ODDump(cv::Mat tmpM)
 	cv::imwrite("ODDump/dumpX.png", dumpOK);
 }
 
+Void OData::ODDump(cv::Mat tmpM, std::string fName1, std::string fName2)
+{
+
+	cv::Mat dumpMap = cv::Mat(picH, picW, CV_32FC3, cv::Scalar(100, 100, 100));
+	cv::scaleAdd(tmpM, 1.0, dumpMap, dumpMap);
+	cv::Mat dumpOK = cv::Mat(picH, picW, CV_8UC1);
+	for (UInt i = 0; i < picH; ++i)
+	{
+		for (UInt j = 0; j < picW; ++j)
+		{
+
+			dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[0];
+			/*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+			cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+		}
+	}
+	cv::imwrite(fName1, dumpOK);
+	for (UInt i = 0; i < picH; ++i)
+	{
+		for (UInt j = 0; j < picW; ++j)
+		{
+
+			dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[1];
+			/*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+			cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+		}
+	}
+	cv::imwrite(fName2, dumpOK);
+}
+Void OData::ODDump2(cv::Mat tmpM, std::string fName1, std::string fName2)
+{
+
+	std::ofstream f(fName1);
+	for (UInt i = 0; i < picH; ++i)
+	{
+		for (UInt j = 0; j < picW; ++j)
+		{
+			f << tmpM.at<cv::Vec3f>(i, j)[0] << " ";
+			/*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+			cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+		}
+		f << std::endl;
+	}
+	f.close();
+	f.open(fName2);
+	for (UInt i = 0; i < picH; ++i)
+	{
+		for (UInt j = 0; j < picW; ++j)
+		{
+
+			f << tmpM.at<cv::Vec3f>(i, j)[1] << " ";
+			/*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
+			cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
+		}
+		f << std::endl;
+	}
+	f.close();
+}
 template<typename T>T** OData::mynew(UInt a, UInt b)
 {
 	T** ret = new T*[a];
 	for (int i = 0; i < a; ++i)
 	{
-		for (int j = 0; j < b; ++j)
-		{
-			ret[i] = new T[b];
-			memset(ret[i], 0, b * sizeof(T));
-		}
+		ret[i] = new T[b];
+		memset(ret[i], 0, b * sizeof(T));
 	}
 	return ret;
 }
@@ -305,10 +364,7 @@ template<typename T>Void OData::mydelete(T** p, UInt a, UInt b)
 {
 	for (int i = 0; i < a; ++i)
 	{
-		for (int j = 0; j < b; ++j)
-		{
-			delete[] p[a];
-		}
+		delete[] p[a];
 	}
 	delete[]p;
 }

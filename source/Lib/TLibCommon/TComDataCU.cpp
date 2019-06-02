@@ -2996,31 +2996,39 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 {
   const TComDataCU* neibCU = NULL;
   UInt neibPUPartIdx;
+  UInt from_where = 0;
   switch( eDir )
   {
   case MD_LEFT:
     {
       neibCU = getPULeft(neibPUPartIdx, uiPartUnitIdx);
+	  from_where = 1;
       break;
     }
   case MD_ABOVE:
     {
       neibCU = getPUAbove(neibPUPartIdx, uiPartUnitIdx);
+	  from_where = 2;
       break;
     }
   case MD_ABOVE_RIGHT:
     {
+
       neibCU = getPUAboveRight(neibPUPartIdx, uiPartUnitIdx);
+	  
+	  from_where = 3;
       break;
     }
   case MD_BELOW_LEFT:
     {
       neibCU = getPUBelowLeft(neibPUPartIdx, uiPartUnitIdx);
+	  from_where = 4;
       break;
     }
   case MD_ABOVE_LEFT:
     {
       neibCU = getPUAboveLeft(neibPUPartIdx, uiPartUnitIdx);
+	  from_where = 5;
       break;
     }
   default:
@@ -3074,10 +3082,26 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 		  globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
 		  globalOData.colX = (neibCU->getCtuRsAddr() % pcPic->getFrameWidthInCtus()) * maxCUWidth;
 		  globalOData.colY = (neibCU->getCtuRsAddr() / pcPic->getFrameWidthInCtus()) * maxCUHeight;
-		  xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );// That is where the scaleFactor is called .iku 521
 		  globalOData.curCTU = m_ctuRsAddr;
 		  globalOData.colCTU = neibCU->getCtuRsAddr();
+		  //const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC);
+		  xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC);
+		  const Int scale = globalOData.HMScale;
+		  // That is where the scaleFactor is called .iku 521
+		  // We find that neibCU might differ from CU
+		  if (this != neibCU)
+		  {
+			  from_where = from_where;
+		  }
 		  rcMv = cMvPred.scaleMv(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
+		  /*if (scale == 4096)
+		  {
+			  rcMv = cMvPred;
+		  }
+		  else
+		  {
+			  rcMv = cMvPred.scaleMv(globalOData.HMScale, globalOData.HMScale, globalOData.HMScale, scale);
+		  }*/
 		  
 #else
 #if HYZ_DEBUG_CTU
@@ -3220,8 +3244,18 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 	//globalOData.colX = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelX();
 	//globalOData.colY = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelY();
 	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
-
+	const Int scale = globalOData.HMScale;
+		
 	rcMv = cColMv.scaleMv(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
+	//cout << globalOData.HMScale << " " << globalOData.XScale << " " << globalOData.YScale << endl;
+	/*if ( scale == 4096 )
+	{
+		rcMv = cColMv;
+	}
+	else
+	{
+		rcMv = cColMv.scaleMv(globalOData.HMScale, globalOData.HMScale, globalOData.HMScale, scale);
+	}*/
 #else
     const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
     if ( scale == 4096 )
@@ -3230,11 +3264,8 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
     }
     else
     {
-#if HYZ_NO_SCALE
-		rcMv = cColMv;
-#else
 		rcMv = cColMv.scaleMv(scale);
-#endif
+
     }
 #endif
   }
@@ -3329,7 +3360,7 @@ Void    TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColP
 }
 #elif HYZ_OF_CTU
 //Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, const TComDataCU* curP = NULL, Int curCTU, Int colCTU)
-Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
+Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
 {
 	// Below part is for calculate the HM scale, final result is in the hm(variable)
 	Int iDiffPocD = iColPOC - iColRefPOC;
@@ -3376,15 +3407,17 @@ Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC,
 		late = iCurrPOC;
 		factor = 1;
 	}
-	if (globalOData.avgFlag[late][early][globalOData.curCTU] == 1)
-	{// Just read data from the buffer
+	if (globalOData.mapBuffer.find(late) != globalOData.mapBuffer.end() && globalOData.mapBuffer[late].find(early) != globalOData.mapBuffer[late].end() && globalOData.avgFlag[late][early][globalOData.curCTU] == 1)
+	{
+		// Just read data from the buffer
 		curAvgX = globalOData.avgBufferX[late][early][globalOData.curCTU] * factor;
 		curAvgY = globalOData.avgBufferY[late][early][globalOData.curCTU] * factor;
+
 	}
 	else
 	{
-		globalOData.avgFlag[late][early][globalOData.curCTU] = 1;
 		cv::Mat curOF = globalOData.getMap(late, early);
+		globalOData.avgFlag[late][early][globalOData.curCTU] = 1;
 		Xlow = globalOData.curX;
 		Ylow = globalOData.curY;
 		Xup = globalOData.curX + 64;
@@ -3409,6 +3442,7 @@ Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC,
 		curAvgY /= ((Xup - Xlow) * (Yup - Ylow));
 		globalOData.avgBufferX[late][early][globalOData.curCTU] = curAvgX;
 		globalOData.avgBufferY[late][early][globalOData.curCTU] = curAvgY;
+		//printf("%d %d %d %d %f %f\n", iCurrPOC, iCurrRefPOC, Xlow, Ylow, curAvgX, curAvgY);
 		curAvgX *= factor;
 		curAvgY *= factor;
 	}
@@ -3428,15 +3462,15 @@ Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC,
 		late = iColPOC;
 		factor = 1;
 	}
-	if (globalOData.avgFlag[late][early][globalOData.colCTU] == 1)
+	if (globalOData.mapBuffer.find(late) != globalOData.mapBuffer.end() && globalOData.mapBuffer[late].find(early) != globalOData.mapBuffer[late].end() && globalOData.avgFlag[late][early][globalOData.colCTU] == 1)
 	{// Just read data from the buffer
 		colAvgX = globalOData.avgBufferX[late][early][globalOData.colCTU] * factor;
 		colAvgY = globalOData.avgBufferY[late][early][globalOData.colCTU] * factor;
 	}
 	else
 	{
-		globalOData.avgFlag[late][early][globalOData.colCTU] = 1;
 		cv::Mat colOF = globalOData.getMap(late, early);
+		globalOData.avgFlag[late][early][globalOData.colCTU] = 1;
 		Xlow = globalOData.colX;
 		Ylow = globalOData.colY;
 		Xup = globalOData.colX + 64;
@@ -3461,14 +3495,17 @@ Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC,
 		colAvgY /= ((Xup - Xlow) * (Yup - Ylow));
 		globalOData.avgBufferX[late][early][globalOData.colCTU] = colAvgX;
 		globalOData.avgBufferY[late][early][globalOData.colCTU] = colAvgY;
+		//printf("%d %d %d %d %f %f\n", iColPOC, iColRefPOC, Xlow, Ylow, colAvgX, colAvgY);
 		colAvgX *= factor;
 		colAvgY *= factor;
 	}
-
-	globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : curAvgX / colAvgX;
-	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : curAvgY / colAvgY;
+	globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : abs(curAvgX / colAvgX);
+	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : abs(curAvgY / colAvgY);
 	globalOData.HMScale = hm;
-	
+	/*globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : curAvgX / colAvgX;
+	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : curAvgY / colAvgY;
+	globalOData.HMScale = hm;*/
+	return iScale;
 }
 //Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
 //{
