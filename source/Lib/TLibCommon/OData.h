@@ -36,7 +36,7 @@ public:
 	std::map<Int, Int> poc2flow;// This map the POC to the optial map's index
 	std::map<Int, Int> poc2prev;
 	std::vector<cv::Mat> ofMaps;// Each time we calcute a new optical flow, we will push it back to this vector
-
+	const Float avgThres = 0.2;
 
 
 	OData();

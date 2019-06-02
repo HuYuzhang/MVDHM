@@ -207,7 +207,9 @@ OFMap OData::getMap(Int curPOC, Int colPOC)// I find that the name for the param
 	OFInfo cur = poc2info[curPOC];
 	OFInfo col = poc2info[colPOC];
 	Int early = -1, late = -1;
+	// We make assert because we promise that the curPOC is always the late!
 	assert(cur.curIndex > col.curIndex);
+	// So the below if block is in fact of no use?
 	if (cur.curIndex < col.curIndex)
 	{
 		early = curPOC;
@@ -224,6 +226,9 @@ OFMap OData::getMap(Int curPOC, Int colPOC)// I find that the name for the param
 	cv::Mat buffer;
 	if (mapBuffer.find(late) != mapBuffer.end()  && mapBuffer[late].find(early) != mapBuffer[late].end())
 	{
+		assert(avgFlag.find(late) != avgFlag.end()  && avgFlag[late].find(early) != avgFlag[late].end());
+		assert(avgBufferX.find(late) != avgBufferX.end()  && avgBufferX[late].find(early) != avgBufferX[late].end());
+		assert(avgBufferY.find(late) != avgBufferY.end()  && avgBufferY[late].find(early) != avgBufferY[late].end());
 		buffer= mapBuffer[late][early];
 		if (cur.curIndex < col.curIndex)
 		{
@@ -237,6 +242,7 @@ OFMap OData::getMap(Int curPOC, Int colPOC)// I find that the name for the param
 	else
 	{
 		// Finish the buffer, if no, we will calculate it and then buffer it
+		// I believe that will be entered for just one time! so just assert it
 		OFInfo tmpinfo = poc2info[late];
 		cv::Mat sum = cv::Mat(picH, picW, CV_32FC3, cv::Scalar(0));
 		while (tmpinfo.curPOC != early)

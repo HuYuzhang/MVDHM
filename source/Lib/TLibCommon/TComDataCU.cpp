@@ -3430,8 +3430,8 @@ Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC,
 	}
 	if (globalOData.avgFlag[late][early][globalOData.colCTU] == 1)
 	{// Just read data from the buffer
-		curAvgX = globalOData.avgBufferX[late][early][globalOData.colCTU] * factor;
-		curAvgY = globalOData.avgBufferY[late][early][globalOData.colCTU] * factor;
+		colAvgX = globalOData.avgBufferX[late][early][globalOData.colCTU] * factor;
+		colAvgY = globalOData.avgBufferY[late][early][globalOData.colCTU] * factor;
 	}
 	else
 	{
@@ -3465,8 +3465,8 @@ Void TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC,
 		colAvgY *= factor;
 	}
 
-	globalOData.XScale = (abs(curAvgX) < 0.5 || abs(colAvgX) < 0.5) ? hm : curAvgX / colAvgX;
-	globalOData.YScale = (abs(curAvgY) < 0.5 || abs(colAvgY) < 0.5) ? hm : curAvgY / colAvgY;
+	globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : curAvgX / colAvgX;
+	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : curAvgY / colAvgY;
 	globalOData.HMScale = hm;
 	
 }
