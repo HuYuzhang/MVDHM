@@ -39,8 +39,9 @@ public:
 	std::map<Int, Int> poc2prev;
 	std::vector<cv::Mat> ofMaps;// Each time we calcute a new optical flow, we will push it back to this vector
 	const Float avgThres = (Float)1;
-
-
+	cv::Mat curImg;
+	Int tmpx, tmpy;
+	Int tmp_flag = 0;
 	OData();
 	OData(UInt len);
 	~OData();

@@ -40,6 +40,8 @@
 
 #include "CommonDef.h"
 #include "hyz.h"
+#include "OData.h"
+extern OData globalOData;
 //! \ingroup TLibCommon
 //! \{
 
@@ -198,9 +200,21 @@ public:
   }
   const TComMv scaleMv(Float hm, Float x, Float y) const
   {
-	  Int mvx = Int((Float)getHor() * x);
-	  Int mvy = Int((Float)getVer() * y);
-	  
+	  Int mvx = getHor();
+	  Int mvy = getVer();
+	  mvx = Int((Float)mvx * x);
+	  mvy = Int((Float)mvy * y);
+	  cv::Mat tmp = globalOData.curImg;
+	  /*if (globalOData.tmp_flag)
+	  {
+		  mvx = globalOData.tmpx;
+		  mvy = globalOData.tmpy;
+
+	  }*/
+#if HYZ_64
+	  mvx = -Int(4.0 * x);
+	  mvy = -Int(4.0 * y);
+#endif
 	  return TComMv(mvx, mvy);
   }
 #else

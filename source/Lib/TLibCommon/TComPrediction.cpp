@@ -650,7 +650,12 @@ Void TComPrediction::xPredInterBlk(const ComponentID compID, TComDataCU *cu, TCo
   Int     refOffset  = (mv->getHor() >> shiftHor) + (mv->getVer() >> shiftVer) * refStride;
 
   Pel*    ref     = refPic->getAddr(compID, cu->getCtuRsAddr(), cu->getZorderIdxInCtu() + partAddr ) + refOffset;
-
+  /*cv::Mat tmp = cv::Mat(400, 516, CV_16UC1, refPic->getBuf(compID));
+  if (globalOData.tmp_flag)
+  {
+	  cv::Mat showMat;
+	  tmp.convertTo(showMat, CV_8UC1);
+  }*/
   Pel*    dst = dstPic->getAddr( compID, partAddr );
 
   Int     xFrac  = mv->getHor() & ((1<<shiftHor)-1);

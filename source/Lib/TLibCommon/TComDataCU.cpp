@@ -3077,7 +3077,8 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 		  const TComPic* pcPic = this->getPic();
 		  const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
 		  const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
-
+		  UInt PUx = g_auiRasterToPelX[g_auiZscanToRaster[uiPartUnitIdx]];
+		  UInt PUy = g_auiRasterToPelY[g_auiZscanToRaster[uiPartUnitIdx]];
 		  globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
 		  globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
 		  globalOData.colX = (neibCU->getCtuRsAddr() % pcPic->getFrameWidthInCtus()) * maxCUWidth;
@@ -3499,12 +3500,27 @@ Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, 
 		colAvgX *= factor;
 		colAvgY *= factor;
 	}
-	globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : abs(curAvgX / colAvgX);
-	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : abs(curAvgY / colAvgY);
-	globalOData.HMScale = hm;
-	/*globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : curAvgX / colAvgX;
+
+
+	globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : curAvgX / colAvgX;
 	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : curAvgY / colAvgY;
-	globalOData.HMScale = hm;*/
+	globalOData.HMScale = hm;
+
+	if (globalOData.XScale < 0 || globalOData.YScale < 0)
+	{
+		globalOData.HMScale = hm;
+		globalOData.tmp_flag = 1;
+		globalOData.tmpx = 20;
+		globalOData.tmpy = 10;
+
+		/*globalOData.XScale = abs(globalOData.XScale);
+		globalOData.YScale = abs(globalOData.YScale);*/
+	}
+#if HYZ_64
+	globalOData.XScale = curAvgX;
+	globalOData.YScale = curAvgY;
+	globalOData.HMScale = hm;
+#endif
 	return iScale;
 }
 //Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)

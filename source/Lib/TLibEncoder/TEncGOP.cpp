@@ -145,9 +145,10 @@ void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, int** p)
   UInt cur_uiDepth = pcCU->getDepth( uiAbsPartIdx );
   UInt uiPUOffset = ( g_auiPUOffset[UInt( ePartSize )] << ( ( pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - cur_uiDepth ) << 1 ) ) >> 4;
   int* statics = *p;
-
   for ( UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset )
   {
+	  cout << pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiSubPartIdx]] << " " << pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiSubPartIdx]] << endl;
+
 	  ++statics[0];
     if (pcCU->getMergeFlag(uiSubPartIdx))
     {
@@ -1714,6 +1715,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 	  pcPic->getPicYuvOrg()->dump2((UChar*)curImg.data, tmpB);
 	  cv::Mat rgbImg;
 	  cv::cvtColor(curImg, rgbImg, CV_YUV2BGR_I420);
+	  globalOData.curImg = rgbImg;
 	  Int curPOC = pcPic->getPOC();
 	  std::string fileName = std::to_string(curPOC) + ".png";
 	  cv::imwrite(fileName, rgbImg);
@@ -1757,6 +1759,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 		  Int tmpPrev = globalOData.getPrevPOC();
 		  // Then we shoud add this optical data to the OData
 		  globalOData.updateMap(curPOC, opMap);// OK, here we finish update the optical map
+		  
 		  // Below is for test insert and query
 #if HYZ_DUMP_OF
 		  cv::Mat tmpM = globalOData.getMap(curPOC, 0);

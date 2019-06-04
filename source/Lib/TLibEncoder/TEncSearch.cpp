@@ -3657,7 +3657,7 @@ Distortion TEncSearch::xGetTemplateCost( TComDataCU* pcCU,
   TComPicYuv* pcPicYuvRef = pcCU->getSlice()->getRefPic( eRefPicList, iRefIdx )->getPicYuvRec();
 
   pcCU->clipMv( cMvCand );
-
+  //cv::Mat tmp = cv::Mat(128, 128, CV_8UC1, pcOrgYuv->getAddr(COMPONENT_Y));
   // prediction pattern
   if ( pcCU->getSlice()->testWeightPred() && pcCU->getSlice()->getSliceType()==P_SLICE )
   {
