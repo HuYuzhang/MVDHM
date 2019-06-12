@@ -164,7 +164,12 @@ protected:
   Bool          xAddMVPCandWithScaling        ( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir ) const;
 
   Void          deriveRightBottomIdx          ( UInt uiPartIdx, UInt& ruiPartIdxRB ) const;
-  Bool          xGetColMVP                    ( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const;
+#if HYZ_MERGE_AVP_SPLIT
+  Bool          xGetColMVP_merge(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const;
+  Bool          xGetColMVP_amvp (const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const;
+#else
+  Bool          xGetColMVP(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const;
+#endif
 
   /// compute scaling factor from POC difference
 #if HYZ_OF_FRAME

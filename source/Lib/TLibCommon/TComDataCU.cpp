@@ -2454,10 +2454,10 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     Int dir = 0;
     UInt uiArrayAddr = iCount;
     xDeriveCenterIdx( uiPUIdx, uiPartIdxCenter );// Now we can see that HM also called the xGetColMVP to get the temporal motion vector .iku 520
-    bExistMV = ctuRsAddr >= 0 && xGetColMVP( REF_PIC_LIST_0, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx );
+    bExistMV = ctuRsAddr >= 0 && xGetColMVP_merge( REF_PIC_LIST_0, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx );
     if( bExistMV == false )
     {
-      bExistMV = xGetColMVP( REF_PIC_LIST_0, getCtuRsAddr(), uiPartIdxCenter,  cColMv, iRefIdx );
+      bExistMV = xGetColMVP_merge( REF_PIC_LIST_0, getCtuRsAddr(), uiPartIdxCenter,  cColMv, iRefIdx );
     }
     if( bExistMV )
     {
@@ -2487,10 +2487,10 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     
     if ( getSlice()->isInterB() )
     {
-      bExistMV = ctuRsAddr >= 0 && xGetColMVP( REF_PIC_LIST_1, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx);
+      bExistMV = ctuRsAddr >= 0 && xGetColMVP_merge( REF_PIC_LIST_1, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx);
       if( bExistMV == false )
       {
-        bExistMV = xGetColMVP( REF_PIC_LIST_1, getCtuRsAddr(), uiPartIdxCenter, cColMv, iRefIdx );
+        bExistMV = xGetColMVP_merge( REF_PIC_LIST_1, getCtuRsAddr(), uiPartIdxCenter, cColMv, iRefIdx );
       }
       if( bExistMV )
       {
@@ -2776,7 +2776,11 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
 
     deriveRightBottomIdx( partIdx, partIdxRB );
     UInt absPartAddr = m_absZIdxInCtu + partAddr;
-
+#if HYZ_PU_POS
+	/*UInt uiLPelX = getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[absPartAddr]];
+	UInt uiTPelY = getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[absPartAddr]];
+	cout << uiLPelX << " " << uiTPelY << endl;*/
+#endif
     //----  co-located RightBottom Temporal Predictor (H) ---//
     absPartIdx = g_auiZscanToRaster[partIdxRB];
     Int ctuRsAddr = -1;
@@ -2805,7 +2809,7 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
     }// Below is what we add the col to the MVP list
 
 
-    if ( ctuRsAddr >= 0 && xGetColMVP( eRefPicList, ctuRsAddr, absPartAddr, cColMv, refIdx_Col ) )
+    if ( ctuRsAddr >= 0 && xGetColMVP_amvp( eRefPicList, ctuRsAddr, absPartAddr, cColMv, refIdx_Col ) )
     {
       pInfo->m_acMvCand[pInfo->iN++] = cColMv;
 #if HYZ_PU_T_MERGE_FLAG
@@ -2816,7 +2820,7 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
     {
       UInt uiPartIdxCenter;
       xDeriveCenterIdx( partIdx, uiPartIdxCenter );
-      if (xGetColMVP( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col ))
+      if (xGetColMVP_amvp( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col ))
       {
         pInfo->m_acMvCand[pInfo->iN++] = cColMv;
 #if HYZ_PU_T_MERGE_FLAG
@@ -3074,6 +3078,18 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 		  rcMv = cMvPred.scaleMv(scales[0], scales[1],  scales[2]);
 		  //delete[] scales;
 #elif HYZ_OF_CTU
+
+#if HYZ_AMVP_ORI// we decide to use the original resize. I have to say that this place, we must use the original rescale
+		  const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC);
+		  if (scale == 4096)
+		  {
+			  rcMv = cMvPred;
+		  }
+		  else
+		  {
+			  rcMv = cMvPred.scaleMv_ori(scale);
+		  }
+#else// We use the deep resize
 		  const TComPic* pcPic = this->getPic();
 		  const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
 		  const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
@@ -3085,25 +3101,12 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 		  globalOData.colY = (neibCU->getCtuRsAddr() / pcPic->getFrameWidthInCtus()) * maxCUHeight;
 		  globalOData.curCTU = m_ctuRsAddr;
 		  globalOData.colCTU = neibCU->getCtuRsAddr();
-		  //const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC);
 		  xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC);
 		  const Int scale = globalOData.HMScale;
 		  // That is where the scaleFactor is called .iku 521
 		  // We find that neibCU might differ from CU
-		  if (this != neibCU)
-		  {
-			  from_where = from_where;
-		  }
 		  rcMv = cMvPred.scaleMv(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
-		  /*if (scale == 4096)
-		  {
-			  rcMv = cMvPred;
-		  }
-		  else
-		  {
-			  rcMv = cMvPred.scaleMv(globalOData.HMScale, globalOData.HMScale, globalOData.HMScale, scale);
-		  }*/
-		  
+#endif//endif for HYZ_AMVP_ORI
 #else
 #if HYZ_DEBUG_CTU
 		  // currPOC must equal to neibPOC, but currRefPOC might differ from neibRefPOC!!
@@ -3134,146 +3137,383 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
   }
   return false;
 }
-// This function is to get the temporal motion vector, also, the distance calculation function is also here called, and that is what we need to modified .iku 520
-Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const
+
+
+#if HYZ_MERGE_AVP_SPLIT
+Bool TComDataCU::xGetColMVP_merge(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const
 {
-  const UInt absPartAddr = partUnitIdx;
+	const UInt absPartAddr = partUnitIdx;
 
-  // use coldir.
-  const TComPic    * const pColPic = getSlice()->getRefPic( RefPicList(getSlice()->isInterB() ? 1-getSlice()->getColFromL0Flag() : 0), getSlice()->getColRefIdx());
+	// use coldir.
+	const TComPic    * const pColPic = getSlice()->getRefPic( RefPicList(getSlice()->isInterB() ? 1-getSlice()->getColFromL0Flag() : 0), getSlice()->getColRefIdx());
 #if REDUCED_ENCODER_MEMORY
-  if (!pColPic->getPicSym()->hasDPBPerCtuData())
-  {
-    return false;
-  }
+	if (!pColPic->getPicSym()->hasDPBPerCtuData())
+	{
+		return false;
+	}
 
-  const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
-  const TComSlice * const pColSlice = pColDpbCtu->getSlice();
-  if(pColDpbCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
+	const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
+	const TComSlice * const pColSlice = pColDpbCtu->getSlice();
+	if(pColDpbCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
 #else
-  const TComDataCU * const pColCtu = pColPic->getCtu( ctuRsAddr );
-  if(pColCtu->getPic()==0 || pColCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
+	const TComDataCU * const pColCtu = pColPic->getCtu( ctuRsAddr );
+	if(pColCtu->getPic()==0 || pColCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
 #endif
-  {
-    return false;
-  }
+	{
+		return false;
+	}
 
 #if REDUCED_ENCODER_MEMORY
-  if (!pColDpbCtu->isInter(absPartAddr))
+	if (!pColDpbCtu->isInter(absPartAddr))
 #else
-  if (!pColCtu->isInter(absPartAddr))
+	if (!pColCtu->isInter(absPartAddr))
 #endif
-  {
-    return false;
-  }
+	{
+		return false;
+	}
 
-  RefPicList eColRefPicList = getSlice()->getCheckLDC() ? eRefPicList : RefPicList(getSlice()->getColFromL0Flag());
+	RefPicList eColRefPicList = getSlice()->getCheckLDC() ? eRefPicList : RefPicList(getSlice()->getColFromL0Flag());
 #if REDUCED_ENCODER_MEMORY
-  Int iColRefIdx            = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+	Int iColRefIdx            = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
 #else
-  Int iColRefIdx            = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
-#endif
-
-  if (iColRefIdx < 0 )
-  {
-    eColRefPicList = RefPicList(1 - eColRefPicList);
-#if REDUCED_ENCODER_MEMORY
-    iColRefIdx = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
-#else
-    iColRefIdx = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+	Int iColRefIdx            = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
 #endif
 
-    if (iColRefIdx < 0 )
-    {
-      return false;
-    }
-  }
-
-  const Bool bIsCurrRefLongTerm = m_pcSlice->getRefPic(eRefPicList, refIdx)->getIsLongTerm();
+	if (iColRefIdx < 0 )
+	{
+		eColRefPicList = RefPicList(1 - eColRefPicList);
 #if REDUCED_ENCODER_MEMORY
-  const Bool bIsColRefLongTerm  = pColSlice->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+		iColRefIdx = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
 #else
-  const Bool bIsColRefLongTerm  = pColCtu->getSlice()->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+		iColRefIdx = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
 #endif
 
-  if ( bIsCurrRefLongTerm != bIsColRefLongTerm )
-  {
-    return false;
-  }
+		if (iColRefIdx < 0 )
+		{
+			return false;
+		}
+	}
 
-  // Scale the vector.
+	const Bool bIsCurrRefLongTerm = m_pcSlice->getRefPic(eRefPicList, refIdx)->getIsLongTerm();
 #if REDUCED_ENCODER_MEMORY
-  const TComMv &cColMv = pColDpbCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+	const Bool bIsColRefLongTerm  = pColSlice->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
 #else
-  const TComMv &cColMv = pColCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+	const Bool bIsColRefLongTerm  = pColCtu->getSlice()->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
 #endif
-  if ( bIsCurrRefLongTerm /*|| bIsColRefLongTerm*/ )
-  {
-    rcMv = cColMv;
-  }
-  else
-  {
-    const Int currPOC    = m_pcSlice->getPOC();
-#if REDUCED_ENCODER_MEMORY
-    const Int colPOC     = pColSlice->getPOC();
-    const Int colRefPOC  = pColSlice->getRefPOC(eColRefPicList, iColRefIdx);
-#else
-    const Int colPOC     = pColCtu->getSlice()->getPOC();
-    const Int colRefPOC  = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
-#endif
-    const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
-#if HYZ_OF_FRAME
-	Float* scales = new Float(3);
-	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, &scales);// That is where the scaleFactor is called .iku 521
-	rcMv = cColMv.scaleMv(scales[0], scales[1], scales[2]);
-	//delete[] scales;
-#elif HYZ_OF_CTU
-	//const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, this, m_ctuRsAddr, ctuRsAddr);
-	// we should prepare for the curXY, colXY
-	const TComPic* pcPic = this->getPic();
-	const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
-	const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
 
-	globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
-	globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
-	globalOData.colX = (ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
-	globalOData.colY = (ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
-	globalOData.curCTU = m_ctuRsAddr;
-	globalOData.colCTU = ctuRsAddr;
-	//globalOData.curX = this->getCUPelX();
-	//globalOData.curY = this->getCUPelY();
-	//globalOData.colX = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelX();
-	//globalOData.colY = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelY();
-	xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
-	const Int scale = globalOData.HMScale;
-		
-	rcMv = cColMv.scaleMv(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
-	//cout << globalOData.HMScale << " " << globalOData.XScale << " " << globalOData.YScale << endl;
-	/*if ( scale == 4096 )
+	if ( bIsCurrRefLongTerm != bIsColRefLongTerm )
+	{
+		return false;
+	}
+
+	// Scale the vector.
+#if REDUCED_ENCODER_MEMORY
+	const TComMv &cColMv = pColDpbCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#else
+	const TComMv &cColMv = pColCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#endif
+	if ( bIsCurrRefLongTerm /*|| bIsColRefLongTerm*/ )
 	{
 		rcMv = cColMv;
 	}
 	else
 	{
-		rcMv = cColMv.scaleMv(globalOData.HMScale, globalOData.HMScale, globalOData.HMScale, scale);
-	}*/
+		const Int currPOC    = m_pcSlice->getPOC();
+#if REDUCED_ENCODER_MEMORY
+		const Int colPOC     = pColSlice->getPOC();
+		const Int colRefPOC  = pColSlice->getRefPOC(eColRefPicList, iColRefIdx);
 #else
-    const Int scale      = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
-    if ( scale == 4096 )
-    {
-      rcMv = cColMv;
-    }
-    else
-    {
-		rcMv = cColMv.scaleMv(scale);
-
-    }
+		const Int colPOC     = pColCtu->getSlice()->getPOC();
+		const Int colRefPOC  = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
 #endif
-  }
+		const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
 
+		//const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, this, m_ctuRsAddr, ctuRsAddr);
+		// we should prepare for the curXY, colXY
+		const TComPic* pcPic = this->getPic();
+		const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
+		const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
 
-  return true;
+		globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		globalOData.colX = (ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		globalOData.colY = (ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		globalOData.curCTU = m_ctuRsAddr;
+		globalOData.colCTU = ctuRsAddr;
+		//globalOData.curX = this->getCUPelX();
+		//globalOData.curY = this->getCUPelY();
+		//globalOData.colX = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelX();
+		//globalOData.colY = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelY();
+		Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+
+		rcMv = cColMv.scaleMv_deep(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
+		/*if (scale == 4096)
+		{
+			rcMv = cColMv;
+		}
+		else
+		{
+			rcMv = cColMv.scaleMv_ori(scale);
+		}*/
+	}
+	return true;
 }
+
+Bool TComDataCU::xGetColMVP_amvp(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const
+{
+	const UInt absPartAddr = partUnitIdx;
+
+	// use coldir.
+	const TComPic    * const pColPic = getSlice()->getRefPic( RefPicList(getSlice()->isInterB() ? 1-getSlice()->getColFromL0Flag() : 0), getSlice()->getColRefIdx());
+#if REDUCED_ENCODER_MEMORY
+	if (!pColPic->getPicSym()->hasDPBPerCtuData())
+	{
+		return false;
+	}
+
+	const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
+	const TComSlice * const pColSlice = pColDpbCtu->getSlice();
+	if(pColDpbCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
+#else
+	const TComDataCU * const pColCtu = pColPic->getCtu( ctuRsAddr );
+	if(pColCtu->getPic()==0 || pColCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
+#endif
+	{
+		return false;
+	}
+
+#if REDUCED_ENCODER_MEMORY
+	if (!pColDpbCtu->isInter(absPartAddr))
+#else
+	if (!pColCtu->isInter(absPartAddr))
+#endif
+	{
+		return false;
+	}
+
+	RefPicList eColRefPicList = getSlice()->getCheckLDC() ? eRefPicList : RefPicList(getSlice()->getColFromL0Flag());
+#if REDUCED_ENCODER_MEMORY
+	Int iColRefIdx            = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#else
+	Int iColRefIdx            = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#endif
+
+	if (iColRefIdx < 0 )
+	{
+		eColRefPicList = RefPicList(1 - eColRefPicList);
+#if REDUCED_ENCODER_MEMORY
+		iColRefIdx = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#else
+		iColRefIdx = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#endif
+
+		if (iColRefIdx < 0 )
+		{
+			return false;
+		}
+	}
+
+	const Bool bIsCurrRefLongTerm = m_pcSlice->getRefPic(eRefPicList, refIdx)->getIsLongTerm();
+#if REDUCED_ENCODER_MEMORY
+	const Bool bIsColRefLongTerm  = pColSlice->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+#else
+	const Bool bIsColRefLongTerm  = pColCtu->getSlice()->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+#endif
+
+	if ( bIsCurrRefLongTerm != bIsColRefLongTerm )
+	{
+		return false;
+	}
+
+	// Scale the vector.
+#if REDUCED_ENCODER_MEMORY
+	const TComMv &cColMv = pColDpbCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#else
+	const TComMv &cColMv = pColCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#endif
+	if ( bIsCurrRefLongTerm /*|| bIsColRefLongTerm*/ )
+	{
+		rcMv = cColMv;
+	}
+	else
+	{
+		const Int currPOC    = m_pcSlice->getPOC();
+#if REDUCED_ENCODER_MEMORY
+		const Int colPOC     = pColSlice->getPOC();
+		const Int colRefPOC  = pColSlice->getRefPOC(eColRefPicList, iColRefIdx);
+#else
+		const Int colPOC     = pColCtu->getSlice()->getPOC();
+		const Int colRefPOC  = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
+#endif
+		const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
+
+		const TComPic* pcPic = this->getPic();
+		const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
+		const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
+
+		globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		globalOData.colX = (ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		globalOData.colY = (ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		globalOData.curCTU = m_ctuRsAddr;
+		globalOData.colCTU = ctuRsAddr;
+
+		/*Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+		rcMv = cColMv.scaleMv_deep(globalOData.HMScale, globalOData.XScale, globalOData.YScale);*/
+		const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+		if (scale == 4096)
+		{
+			rcMv = cColMv;
+		}
+		else
+		{
+			rcMv = cColMv.scaleMv_ori(scale);
+		}
+	}
+	return true;
+}
+#else//else for HYZ_MERGE_AMVP_SPLIT
+// This function is to get the temporal motion vector, also, the distance calculation function is also here called, and that is what we need to modified .iku 520
+Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const
+{
+	const UInt absPartAddr = partUnitIdx;
+
+	// use coldir.
+	const TComPic    * const pColPic = getSlice()->getRefPic( RefPicList(getSlice()->isInterB() ? 1-getSlice()->getColFromL0Flag() : 0), getSlice()->getColRefIdx());
+#if REDUCED_ENCODER_MEMORY
+	if (!pColPic->getPicSym()->hasDPBPerCtuData())
+	{
+		return false;
+	}
+
+	const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
+	const TComSlice * const pColSlice = pColDpbCtu->getSlice();
+	if(pColDpbCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
+#else
+	const TComDataCU * const pColCtu = pColPic->getCtu( ctuRsAddr );
+	if(pColCtu->getPic()==0 || pColCtu->getPartitionSize(partUnitIdx)==NUMBER_OF_PART_SIZES)
+#endif
+	{
+		return false;
+	}
+
+#if REDUCED_ENCODER_MEMORY
+	if (!pColDpbCtu->isInter(absPartAddr))
+#else
+	if (!pColCtu->isInter(absPartAddr))
+#endif
+	{
+		return false;
+	}
+
+	RefPicList eColRefPicList = getSlice()->getCheckLDC() ? eRefPicList : RefPicList(getSlice()->getColFromL0Flag());
+#if REDUCED_ENCODER_MEMORY
+	Int iColRefIdx            = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#else
+	Int iColRefIdx            = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#endif
+
+	if (iColRefIdx < 0 )
+	{
+		eColRefPicList = RefPicList(1 - eColRefPicList);
+#if REDUCED_ENCODER_MEMORY
+		iColRefIdx = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#else
+		iColRefIdx = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#endif
+
+		if (iColRefIdx < 0 )
+		{
+			return false;
+		}
+	}
+
+	const Bool bIsCurrRefLongTerm = m_pcSlice->getRefPic(eRefPicList, refIdx)->getIsLongTerm();
+#if REDUCED_ENCODER_MEMORY
+	const Bool bIsColRefLongTerm  = pColSlice->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+#else
+	const Bool bIsColRefLongTerm  = pColCtu->getSlice()->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+#endif
+
+	if ( bIsCurrRefLongTerm != bIsColRefLongTerm )
+	{
+		return false;
+	}
+
+	// Scale the vector.
+#if REDUCED_ENCODER_MEMORY
+	const TComMv &cColMv = pColDpbCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#else
+	const TComMv &cColMv = pColCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#endif
+	if ( bIsCurrRefLongTerm /*|| bIsColRefLongTerm*/ )
+	{
+		rcMv = cColMv;
+	}
+	else
+	{
+		const Int currPOC    = m_pcSlice->getPOC();
+#if REDUCED_ENCODER_MEMORY
+		const Int colPOC     = pColSlice->getPOC();
+		const Int colRefPOC  = pColSlice->getRefPOC(eColRefPicList, iColRefIdx);
+#else
+		const Int colPOC     = pColCtu->getSlice()->getPOC();
+		const Int colRefPOC  = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
+#endif
+		const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
+#if HYZ_OF_FRAME
+		Float* scales = new Float(3);
+		xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, &scales);// That is where the scaleFactor is called .iku 521
+		rcMv = cColMv.scaleMv(scales[0], scales[1], scales[2]);
+		//delete[] scales;
+#elif HYZ_OF_CTU
+		//const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, this, m_ctuRsAddr, ctuRsAddr);
+		// we should prepare for the curXY, colXY
+		const TComPic* pcPic = this->getPic();
+		const UInt maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
+		const UInt maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
+
+		globalOData.curX = (m_ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		globalOData.curY = (m_ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		globalOData.colX = (ctuRsAddr % pcPic->getFrameWidthInCtus()) * maxCUWidth;
+		globalOData.colY = (ctuRsAddr / pcPic->getFrameWidthInCtus()) * maxCUHeight;
+		globalOData.curCTU = m_ctuRsAddr;
+		globalOData.colCTU = ctuRsAddr;
+		//globalOData.curX = this->getCUPelX();
+		//globalOData.curY = this->getCUPelY();
+		//globalOData.colX = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelX();
+		//globalOData.colY = this->getPic()->getPicSym()->getCtu(ctuRsAddr)->getCUPelY();
+		xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+		const Int scale = globalOData.HMScale;
+
+		rcMv = cColMv.scaleMv_deep(globalOData.HMScale, globalOData.XScale, globalOData.YScale);
+		//cout << globalOData.HMScale << " " << globalOData.XScale << " " << globalOData.YScale << endl;
+		/*if ( scale == 4096 )
+		{
+		rcMv = cColMv;
+		}
+		else
+		{
+		rcMv = cColMv.scaleMv(globalOData.HMScale, globalOData.HMScale, globalOData.HMScale, scale);
+		}*/
+#else
+		const Int scale = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC);
+		if (scale == 4096)
+		{
+			rcMv = cColMv;
+		}
+		else
+		{
+			rcMv = cColMv.scaleMv(scale);
+
+		}
+#endif
+}
+	return true;
+}
+
+#endif
+
 
 #if HYZ_OF_FRAME
 int QQ(Float a)
@@ -3505,17 +3745,20 @@ Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, 
 	globalOData.XScale = (abs(curAvgX) < globalOData.avgThres || abs(colAvgX) < globalOData.avgThres) ? hm : curAvgX / colAvgX;
 	globalOData.YScale = (abs(curAvgY) < globalOData.avgThres || abs(colAvgY) < globalOData.avgThres) ? hm : curAvgY / colAvgY;
 	globalOData.HMScale = hm;
-
-	if (globalOData.XScale < 0 || globalOData.YScale < 0)
+	/*if (globalOData.XScale != globalOData.HMScale || globalOData.YScale != globalOData.HMScale)
 	{
 		globalOData.HMScale = hm;
-		globalOData.tmp_flag = 1;
-		globalOData.tmpx = 20;
-		globalOData.tmpy = 10;
+	}*/
+	//if (globalOData.XScale < 0 || globalOData.YScale < 0)
+	//{
+	//	globalOData.HMScale = hm;
+	//	globalOData.tmp_flag = 1;
+	//	globalOData.tmpx = 20;
+	//	globalOData.tmpy = 10;
 
-		/*globalOData.XScale = abs(globalOData.XScale);
-		globalOData.YScale = abs(globalOData.YScale);*/
-	}
+	//	/*globalOData.XScale = abs(globalOData.XScale);
+	//	globalOData.YScale = abs(globalOData.YScale);*/
+	//}
 #if HYZ_64
 	globalOData.XScale = curAvgX;
 	globalOData.YScale = curAvgY;

@@ -189,32 +189,44 @@ public:
   }
 #endif
 #elif HYZ_OF_CTU
-  const TComMv scaleMv(Float hm, Float x, Float y, Int iScale) const
+  const TComMv scaleMv_ori(Int iScale) const
   {
-	  Int mvx = Int((Float)getHor() * x);
-	  Int mvy = Int((Float)getVer() * y);
-	  mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	  mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
-	  
+	  Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+
 	  return TComMv(mvx, mvy);
   }
-  const TComMv scaleMv(Float hm, Float x, Float y) const
+  //const TComMv scaleMv(Float hm, Float x, Float y, Int iScale) const // I decide to avoiding using this function for its unclear meaning
+  //{
+	 // Int mvx = Int((Float)getHor() * x);
+	 // Int mvy = Int((Float)getVer() * y);
+	 // mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
+	 // mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	 // 
+	 // return TComMv(mvx, mvy);
+  //}
+ /* const TComMv scaleMv(Float hm, Float x, Float y) const // I decide to avoiding using this function for its unclear meaning
   {
 	  Int mvx = getHor();
 	  Int mvy = getVer();
 	  mvx = Int((Float)mvx * x);
 	  mvy = Int((Float)mvy * y);
-	  cv::Mat tmp = globalOData.curImg;
-	  /*if (globalOData.tmp_flag)
-	  {
-		  mvx = globalOData.tmpx;
-		  mvy = globalOData.tmpy;
-
-	  }*/
-#if HYZ_64
-	  mvx = -Int(4.0 * x);
-	  mvy = -Int(4.0 * y);
-#endif
+	  return TComMv(mvx, mvy);
+  }*/
+  const TComMv scaleMv_deep(Float hm, Float x, Float y) const// We strongly recommend to use this function!
+  {
+	  Int mvx = getHor();
+	  Int mvy = getVer();
+	  mvx = Int((Float)mvx * x);
+	  mvy = Int((Float)mvy * y);
+	  return TComMv(mvx, mvy);
+  }
+  const TComMv scaleMv_deep(Float x, Float y) const// We strongly recommend to use this function!
+  {
+	  Int mvx = getHor();
+	  Int mvy = getVer();
+	  mvx = Int((Float)mvx * x);
+	  mvy = Int((Float)mvy * y);
 	  return TComMv(mvx, mvy);
   }
 #else

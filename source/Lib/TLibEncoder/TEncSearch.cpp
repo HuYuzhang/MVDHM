@@ -2996,7 +2996,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
     xGetBlkBits( ePartSize, pcCU->getSlice()->isInterP(), iPartIdx, uiLastMode, uiMbBits);
 
     pcCU->getPartIndexAndSize( iPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
-
+	// Ok , we only need to call this function to get the PU's high and width!
 #if AMP_MRG
     Bool bTestNormalMC = true;
 
@@ -3424,6 +3424,10 @@ Void TEncSearch::xEstimateMvPredAMVP( TComDataCU* pcCU, TComYuv* pcOrgYuv, UInt 
   Int        i;
 
   pcCU->getPartIndexAndSize( uiPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
+  //OK iRoiWidth and iRoiHeight is the shape if the PU
+#if HYZ_PU_POS
+  cout << uiPartIdx << " " << uiPartAddr << " " << iRoiWidth << " " << iRoiHeight << endl;
+#endif
 
 #if HYZ_PU_T_MERGE_FLAG
   // OK! we now now in LDB, the eRefPicList will always be the REF_PIC_LIST_0!!!!!!!!!!!!!!!!!!!!!!!!
