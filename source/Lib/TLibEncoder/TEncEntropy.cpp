@@ -444,7 +444,7 @@ Void TEncEntropy::encodePredInfo( TComDataCU* pcCU, UInt uiAbsPartIdx )
   }
   else                                                                // if it is Inter mode, encode motion vector and reference index
   {
-    encodePUWise( pcCU, uiAbsPartIdx );// Now all we need to care about is this part, all PU info is here .iku 520
+    encodePUWise( pcCU, uiAbsPartIdx );
   }
 }
 
@@ -453,7 +453,7 @@ Void TEncEntropy::encodeCrossComponentPrediction( TComTU &rTu, ComponentID compI
   m_pcEntropyCoderIf->codeCrossComponentPrediction( rTu, compID );
 }
 
-//! encode motion information for every PU block, OK that's just what we want! What?! no digui??? .iku 520
+//! encode motion information for every PU block
 Void TEncEntropy::encodePUWise( TComDataCU* pcCU, UInt uiAbsPartIdx )
 {
 #if ENVIRONMENT_VARIABLE_DEBUG_AND_TEST
@@ -461,14 +461,14 @@ Void TEncEntropy::encodePUWise( TComDataCU* pcCU, UInt uiAbsPartIdx )
 #endif
 
   PartSize ePartSize = pcCU->getPartitionSize( uiAbsPartIdx );
-  UInt uiNumPU = ( ePartSize == SIZE_2Nx2N ? 1 : ( ePartSize == SIZE_NxN ? 4 : 2 ) );// OK, we have 3 conditions, and each responds to different number of PU~ .iku 520
+  UInt uiNumPU = ( ePartSize == SIZE_2Nx2N ? 1 : ( ePartSize == SIZE_NxN ? 4 : 2 ) );
   UInt uiDepth = pcCU->getDepth( uiAbsPartIdx );
   UInt uiPUOffset = ( g_auiPUOffset[UInt( ePartSize )] << ( ( pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - uiDepth ) << 1 ) ) >> 4;
 
   for ( UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset )
   {
     encodeMergeFlag( pcCU, uiSubPartIdx );
-    if ( pcCU->getMergeFlag( uiSubPartIdx ) )// Here we will check if we use the merge mode, if so, we will encode the mergeIndex, else encode the MV? But I only care about this line .iku 520
+    if ( pcCU->getMergeFlag( uiSubPartIdx ) )
     {
       encodeMergeIndex( pcCU, uiSubPartIdx );
 #if ENVIRONMENT_VARIABLE_DEBUG_AND_TEST

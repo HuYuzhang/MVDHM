@@ -51,127 +51,13 @@
 
 #include <deque>
 using namespace std;
-extern OData globalOData;
+
+#if HYZ_RA
+extern Opt iku;
+#endif
 //! \ingroup TLibEncoder
 //! \{
-#if HYZ_PU_T_MERGE_FLAG   
-void printCTUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth)
-{
 
-	TComPic   *const pcPic = pcCU->getPic();
-	TComSlice *const pcSlice = pcCU->getSlice();
-	const TComSPS   &sps = *(pcSlice->getSPS());
-	// const TComPPS   &pps = *(pcSlice->getPPS());
-
-	const UInt maxCUWidth = sps.getMaxCUWidth();
-	const UInt maxCUHeight = sps.getMaxCUHeight();
-
-	Bool bBoundary = false;
-	UInt uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
-	const UInt uiRPelX = uiLPelX + (maxCUWidth >> uiDepth) - 1;
-	UInt uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
-	const UInt uiBPelY = uiTPelY + (maxCUHeight >> uiDepth) - 1;
-
-	if ((uiRPelX < sps.getPicWidthInLumaSamples()) && (uiBPelY < sps.getPicHeightInLumaSamples()))
-  {}
-	else
-	{
-		bBoundary = true;
-	}
-
-	if (((uiDepth < pcCU->getDepth(uiAbsPartIdx)) && (uiDepth < sps.getLog2DiffMaxMinCodingBlockSize())) || bBoundary)
-	{
-		UInt uiQNumParts = (pcPic->getNumPartitionsInCtu() >> (uiDepth << 1)) >> 2;
-
-		for (UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++, uiAbsPartIdx += uiQNumParts)
-		{
-			uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
-			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
-			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
-			{
-				printCTUInfo(pcCU, uiAbsPartIdx, uiDepth + 1);
-			}
-		}
-		return;
-	}
-	cout << "CUInfo: " << pcCU->getSlice()->getPOC() << ' ' << uiTPelY << ' ' << uiLPelX << ' ' << (maxCUWidth >> uiDepth) << ' ' << (maxCUHeight >> uiDepth)<<' ' << endl;
-}
-void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, int** p)
-{
-
-	TComPic   *const pcPic = pcCU->getPic();
-	TComSlice *const pcSlice = pcCU->getSlice();
-	const TComSPS   &sps = *(pcSlice->getSPS());
-	// const TComPPS   &pps = *(pcSlice->getPPS());
-
-	const UInt maxCUWidth = sps.getMaxCUWidth();
-	const UInt maxCUHeight = sps.getMaxCUHeight();
-
-	Bool bBoundary = false;
-	UInt uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
-	const UInt uiRPelX = uiLPelX + (maxCUWidth >> uiDepth) - 1;
-	UInt uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
-	const UInt uiBPelY = uiTPelY + (maxCUHeight >> uiDepth) - 1;
-
-	if ((uiRPelX < sps.getPicWidthInLumaSamples()) && (uiBPelY < sps.getPicHeightInLumaSamples()))
-  {}
-	else
-	{
-		bBoundary = true;
-	}
-
-	if (((uiDepth < pcCU->getDepth(uiAbsPartIdx)) && (uiDepth < sps.getLog2DiffMaxMinCodingBlockSize())) || bBoundary)
-	{
-		UInt uiQNumParts = (pcPic->getNumPartitionsInCtu() >> (uiDepth << 1)) >> 2;
-
-		for (UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++, uiAbsPartIdx += uiQNumParts)
-		{
-			uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
-			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
-			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
-			{
-				printPUInfo(pcCU, uiAbsPartIdx, uiDepth + 1, p);
-			}
-		}
-		return;
-	}
-	if (pcCU->isIntra(uiAbsPartIdx))
-	{
-		return;
-	}
-  // Now we have reached the lowest CU, Here we can found our PUs~ .iku 520
-  PartSize ePartSize = pcCU->getPartitionSize( uiAbsPartIdx );
-  UInt uiNumPU = ( ePartSize == SIZE_2Nx2N ? 1 : ( ePartSize == SIZE_NxN ? 4 : 2 ) );// OK, we have 3 conditions, and each responds to different number of PU~ .iku 520
-  UInt cur_uiDepth = pcCU->getDepth( uiAbsPartIdx );
-  UInt uiPUOffset = ( g_auiPUOffset[UInt( ePartSize )] << ( ( pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - cur_uiDepth ) << 1 ) ) >> 4;
-  int* statics = *p;
-  for ( UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset )
-  {
-	  cout << pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiSubPartIdx]] << " " << pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiSubPartIdx]] << endl;
-
-	  ++statics[0];
-    if (pcCU->getMergeFlag(uiSubPartIdx))
-    {
-		++statics[1];
-      UChar real_index = pcCU->getMergeIndex(uiSubPartIdx);// This is what the real index is
-      UChar time_index = pcCU->getTFlag1(uiSubPartIdx);// This is what the time index is
-      if (real_index == time_index)
-      {
-		  ++statics[2];
-      }
-    }
-	else
-	{
-		UChar real_index1 = pcCU->getMVPIdx(REF_PIC_LIST_0, uiSubPartIdx);
-		UChar time_index = pcCU->getTFlag1(uiSubPartIdx);
-		if (real_index1 == time_index)
-		{
-			++statics[3];
-		}
-	}
-  }
-}
-#endif
 // ====================================================================================================================
 // Constructor / destructor / initialization / destroy
 // ====================================================================================================================
@@ -1238,566 +1124,462 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
   {
     m_pcCfg->setEncodedFlag(iGOPid, false);
   }
-  // OK, Here is the main part of encoding the GOP. I think below must have function to read YUV from the original YUV file .iku 5.26
-  for (Int iGOPid = 0; iGOPid < m_iGopSize; iGOPid++)
-  {
-	  if (m_pcCfg->getEfficientFieldIRAPEnabled())
-	  {
-		  iGOPid = effFieldIRAPMap.adjustGOPid(iGOPid);
-	  }
 
-	  //-- For time output for each slice
-	  clock_t iBeforeTime = clock();
+  for ( Int iGOPid=0; iGOPid < m_iGopSize; iGOPid++ )
+  {
+    if (m_pcCfg->getEfficientFieldIRAPEnabled())
+    {
+      iGOPid=effFieldIRAPMap.adjustGOPid(iGOPid);
+    }
+
+    //-- For time output for each slice
+    clock_t iBeforeTime = clock();
 
 #if !X0038_LAMBDA_FROM_QP_CAPABILITY
-	  UInt uiColDir = calculateCollocatedFromL1Flag(m_pcCfg, iGOPid, m_iGopSize);
+    UInt uiColDir = calculateCollocatedFromL1Flag(m_pcCfg, iGOPid, m_iGopSize);
 #endif
 
-	  /////////////////////////////////////////////////////////////////////////////////////////////////// Initial to start encoding
-	  Int iTimeOffset;
-	  Int pocCurr;
+    /////////////////////////////////////////////////////////////////////////////////////////////////// Initial to start encoding
+    Int iTimeOffset;
+    Int pocCurr;
 
-	  if (iPOCLast == 0) //case first frame or first top field
-	  {
-		  pocCurr = 0;
-		  iTimeOffset = 1;
-	  }
-	  else if (iPOCLast == 1 && isField) //case first bottom field, just like the first frame, the poc computation is not right anymore, we set the right value
-	  {
-		  pocCurr = 1;
-		  iTimeOffset = 1;
-	  }
-	  else
-	  {
-		  pocCurr = iPOCLast - iNumPicRcvd + m_pcCfg->getGOPEntry(iGOPid).m_POC - ((isField && m_iGopSize > 1) ? 1 : 0);
-		  iTimeOffset = m_pcCfg->getGOPEntry(iGOPid).m_POC;
-	  }
+    if(iPOCLast == 0) //case first frame or first top field
+    {
+      pocCurr=0;
+      iTimeOffset = 1;
+    }
+    else if(iPOCLast == 1 && isField) //case first bottom field, just like the first frame, the poc computation is not right anymore, we set the right value
+    {
+      pocCurr = 1;
+      iTimeOffset = 1;
+    }
+    else
+    {
+      pocCurr = iPOCLast - iNumPicRcvd + m_pcCfg->getGOPEntry(iGOPid).m_POC - ((isField && m_iGopSize>1) ? 1:0);
+      iTimeOffset = m_pcCfg->getGOPEntry(iGOPid).m_POC;
+    }
 
-	  if (pocCurr >= m_pcCfg->getFramesToBeEncoded())
-	  {
-		  if (m_pcCfg->getEfficientFieldIRAPEnabled())
-		  {
-			  iGOPid = effFieldIRAPMap.restoreGOPid(iGOPid);
-		  }
-		  continue;
-	  }
+    if(pocCurr>=m_pcCfg->getFramesToBeEncoded())
+    {
+      if (m_pcCfg->getEfficientFieldIRAPEnabled())
+      {
+        iGOPid=effFieldIRAPMap.restoreGOPid(iGOPid);
+      }
+      continue;
+    }
 
-	  if (getNalUnitType(pocCurr, m_iLastIDR, isField) == NAL_UNIT_CODED_SLICE_IDR_W_RADL || getNalUnitType(pocCurr, m_iLastIDR, isField) == NAL_UNIT_CODED_SLICE_IDR_N_LP)
-	  {
-		  m_iLastIDR = pocCurr;
-	  }
-	  // start a new access unit: create an entry in the list of output access units
-	  accessUnitsInGOP.push_back(AccessUnit());
-	  AccessUnit& accessUnit = accessUnitsInGOP.back();
-	  xGetBuffer(rcListPic, rcListPicYuvRecOut, iNumPicRcvd, iTimeOffset, pcPic, pcPicYuvRecOut, pocCurr, isField);
+    if( getNalUnitType(pocCurr, m_iLastIDR, isField) == NAL_UNIT_CODED_SLICE_IDR_W_RADL || getNalUnitType(pocCurr, m_iLastIDR, isField) == NAL_UNIT_CODED_SLICE_IDR_N_LP )
+    {
+      m_iLastIDR = pocCurr;
+    }
+    // start a new access unit: create an entry in the list of output access units
+    accessUnitsInGOP.push_back(AccessUnit());
+    AccessUnit& accessUnit = accessUnitsInGOP.back();
+    xGetBuffer( rcListPic, rcListPicYuvRecOut, iNumPicRcvd, iTimeOffset, pcPic, pcPicYuvRecOut, pocCurr, isField );
 
 #if REDUCED_ENCODER_MEMORY
-	  pcPic->prepareForReconstruction();
+    pcPic->prepareForReconstruction();
 
 #endif
-	  //  Slice data initialization
-	  pcPic->clearSliceBuffer();
-	  pcPic->allocateNewSlice();
-	  m_pcSliceEncoder->setSliceIdx(0);
-	  pcPic->setCurrSliceIdx(0);
+    //  Slice data initialization
+    pcPic->clearSliceBuffer();
+    pcPic->allocateNewSlice();
+    m_pcSliceEncoder->setSliceIdx(0);
+    pcPic->setCurrSliceIdx(0);
 
-	  m_pcSliceEncoder->initEncSlice(pcPic, iPOCLast, pocCurr, iGOPid, pcSlice, isField);
+    m_pcSliceEncoder->initEncSlice ( pcPic, iPOCLast, pocCurr, iGOPid, pcSlice, isField );
 
-	  pcSlice->setLastIDR(m_iLastIDR);
-	  pcSlice->setSliceIdx(0);
-	  //set default slice level flag to the same as SPS level flag
-	  pcSlice->setLFCrossSliceBoundaryFlag(pcSlice->getPPS()->getLoopFilterAcrossSlicesEnabledFlag());
+    pcSlice->setLastIDR(m_iLastIDR);
+    pcSlice->setSliceIdx(0);
+    //set default slice level flag to the same as SPS level flag
+    pcSlice->setLFCrossSliceBoundaryFlag(  pcSlice->getPPS()->getLoopFilterAcrossSlicesEnabledFlag()  );
 
-	  if (pcSlice->getSliceType() == B_SLICE&&m_pcCfg->getGOPEntry(iGOPid).m_sliceType == 'P')
-	  {
-		  pcSlice->setSliceType(P_SLICE);
-	  }
-	  if (pcSlice->getSliceType() == B_SLICE&&m_pcCfg->getGOPEntry(iGOPid).m_sliceType == 'I')
-	  {
-		  pcSlice->setSliceType(I_SLICE);
-	  }
+    if(pcSlice->getSliceType()==B_SLICE&&m_pcCfg->getGOPEntry(iGOPid).m_sliceType=='P')
+    {
+      pcSlice->setSliceType(P_SLICE);
+    }
+    if(pcSlice->getSliceType()==B_SLICE&&m_pcCfg->getGOPEntry(iGOPid).m_sliceType=='I')
+    {
+      pcSlice->setSliceType(I_SLICE);
+    }
+    
+    // Set the nal unit type
+    pcSlice->setNalUnitType(getNalUnitType(pocCurr, m_iLastIDR, isField));
+    if(pcSlice->getTemporalLayerNonReferenceFlag())
+    {
+      if (pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_TRAIL_R &&
+          !(m_iGopSize == 1 && pcSlice->getSliceType() == I_SLICE))
+        // Add this condition to avoid POC issues with encoder_intra_main.cfg configuration (see #1127 in bug tracker)
+      {
+        pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_TRAIL_N);
+      }
+      if(pcSlice->getNalUnitType()==NAL_UNIT_CODED_SLICE_RADL_R)
+      {
+        pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_RADL_N);
+      }
+      if(pcSlice->getNalUnitType()==NAL_UNIT_CODED_SLICE_RASL_R)
+      {
+        pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_RASL_N);
+      }
+    }
 
-	  // Set the nal unit type
-	  pcSlice->setNalUnitType(getNalUnitType(pocCurr, m_iLastIDR, isField));
-	  if (pcSlice->getTemporalLayerNonReferenceFlag())
-	  {
-		  if (pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_TRAIL_R &&
-			  !(m_iGopSize == 1 && pcSlice->getSliceType() == I_SLICE))
-			  // Add this condition to avoid POC issues with encoder_intra_main.cfg configuration (see #1127 in bug tracker)
-		  {
-			  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_TRAIL_N);
-		  }
-		  if (pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RADL_R)
-		  {
-			  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_RADL_N);
-		  }
-		  if (pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RASL_R)
-		  {
-			  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_RASL_N);
-		  }
-	  }
+    if (m_pcCfg->getEfficientFieldIRAPEnabled())
+    {
+      if ( pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_LP
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_RADL
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_N_LP
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_W_RADL
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_N_LP
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_CRA )  // IRAP picture
+      {
+        m_associatedIRAPType = pcSlice->getNalUnitType();
+        m_associatedIRAPPOC = pocCurr;
+      }
+      pcSlice->setAssociatedIRAPType(m_associatedIRAPType);
+      pcSlice->setAssociatedIRAPPOC(m_associatedIRAPPOC);
+    }
+    // Do decoding refresh marking if any
+    pcSlice->decodingRefreshMarking(m_pocCRA, m_bRefreshPending, rcListPic, m_pcCfg->getEfficientFieldIRAPEnabled());
+    m_pcEncTop->selectReferencePictureSet(pcSlice, pocCurr, iGOPid);
+    if (!m_pcCfg->getEfficientFieldIRAPEnabled())
+    {
+      if ( pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_LP
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_RADL
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_N_LP
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_W_RADL
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_N_LP
+        || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_CRA )  // IRAP picture
+      {
+        m_associatedIRAPType = pcSlice->getNalUnitType();
+        m_associatedIRAPPOC = pocCurr;
+      }
+      pcSlice->setAssociatedIRAPType(m_associatedIRAPType);
+      pcSlice->setAssociatedIRAPPOC(m_associatedIRAPPOC);
+    }
 
-	  if (m_pcCfg->getEfficientFieldIRAPEnabled())
-	  {
-		  if (pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_LP
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_RADL
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_N_LP
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_W_RADL
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_N_LP
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_CRA)  // IRAP picture
-		  {
-			  m_associatedIRAPType = pcSlice->getNalUnitType();
-			  m_associatedIRAPPOC = pocCurr;
-		  }
-		  pcSlice->setAssociatedIRAPType(m_associatedIRAPType);
-		  pcSlice->setAssociatedIRAPPOC(m_associatedIRAPPOC);
-	  }
-	  // Do decoding refresh marking if any
-	  pcSlice->decodingRefreshMarking(m_pocCRA, m_bRefreshPending, rcListPic, m_pcCfg->getEfficientFieldIRAPEnabled());
-	  m_pcEncTop->selectReferencePictureSet(pcSlice, pocCurr, iGOPid);
-	  if (!m_pcCfg->getEfficientFieldIRAPEnabled())
-	  {
-		  if (pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_LP
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_W_RADL
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_BLA_N_LP
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_W_RADL
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_IDR_N_LP
-			  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_CRA)  // IRAP picture
-		  {
-			  m_associatedIRAPType = pcSlice->getNalUnitType();
-			  m_associatedIRAPPOC = pocCurr;
-		  }
-		  pcSlice->setAssociatedIRAPType(m_associatedIRAPType);
-		  pcSlice->setAssociatedIRAPPOC(m_associatedIRAPPOC);
-	  }
+    if ((pcSlice->checkThatAllRefPicsAreAvailable(rcListPic, pcSlice->getRPS(), false, m_iLastRecoveryPicPOC, m_pcCfg->getDecodingRefreshType() == 3) != 0) || (pcSlice->isIRAP()) 
+      || (m_pcCfg->getEfficientFieldIRAPEnabled() && isField && pcSlice->getAssociatedIRAPType() >= NAL_UNIT_CODED_SLICE_BLA_W_LP && pcSlice->getAssociatedIRAPType() <= NAL_UNIT_CODED_SLICE_CRA && pcSlice->getAssociatedIRAPPOC() == pcSlice->getPOC()+1)
+      )
+    {
+      pcSlice->createExplicitReferencePictureSetFromReference(rcListPic, pcSlice->getRPS(), pcSlice->isIRAP(), m_iLastRecoveryPicPOC, m_pcCfg->getDecodingRefreshType() == 3, m_pcCfg->getEfficientFieldIRAPEnabled());
+    }
 
-	  if ((pcSlice->checkThatAllRefPicsAreAvailable(rcListPic, pcSlice->getRPS(), false, m_iLastRecoveryPicPOC, m_pcCfg->getDecodingRefreshType() == 3) != 0) || (pcSlice->isIRAP())
-		  || (m_pcCfg->getEfficientFieldIRAPEnabled() && isField && pcSlice->getAssociatedIRAPType() >= NAL_UNIT_CODED_SLICE_BLA_W_LP && pcSlice->getAssociatedIRAPType() <= NAL_UNIT_CODED_SLICE_CRA && pcSlice->getAssociatedIRAPPOC() == pcSlice->getPOC() + 1)
-		  )
-	  {
-		  pcSlice->createExplicitReferencePictureSetFromReference(rcListPic, pcSlice->getRPS(), pcSlice->isIRAP(), m_iLastRecoveryPicPOC, m_pcCfg->getDecodingRefreshType() == 3, m_pcCfg->getEfficientFieldIRAPEnabled());
-	  }
+    pcSlice->applyReferencePictureSet(rcListPic, pcSlice->getRPS());
 
-	  pcSlice->applyReferencePictureSet(rcListPic, pcSlice->getRPS());
+    if(pcSlice->getTLayer() > 0 
+      &&  !( pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RADL_N     // Check if not a leading picture
+          || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RADL_R
+          || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RASL_N
+          || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RASL_R )
+        )
+    {
+      if(pcSlice->isTemporalLayerSwitchingPoint(rcListPic) || pcSlice->getSPS()->getTemporalIdNestingFlag())
+      {
+        if(pcSlice->getTemporalLayerNonReferenceFlag())
+        {
+          pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_TSA_N);
+        }
+        else
+        {
+          pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_TSA_R);
+        }
+      }
+      else if(pcSlice->isStepwiseTemporalLayerSwitchingPointCandidate(rcListPic))
+      {
+        Bool isSTSA=true;
+        for(Int ii=iGOPid+1;(ii<m_pcCfg->getGOPSize() && isSTSA==true);ii++)
+        {
+          Int lTid= m_pcCfg->getGOPEntry(ii).m_temporalId;
+          if(lTid==pcSlice->getTLayer())
+          {
+            const TComReferencePictureSet* nRPS = pcSlice->getSPS()->getRPSList()->getReferencePictureSet(ii);
+            for(Int jj=0;jj<nRPS->getNumberOfPictures();jj++)
+            {
+              if(nRPS->getUsed(jj))
+              {
+                Int tPoc=m_pcCfg->getGOPEntry(ii).m_POC+nRPS->getDeltaPOC(jj);
+                Int kk=0;
+                for(kk=0;kk<m_pcCfg->getGOPSize();kk++)
+                {
+                  if(m_pcCfg->getGOPEntry(kk).m_POC==tPoc)
+                  {
+                    break;
+                  }
+                }
+                Int tTid=m_pcCfg->getGOPEntry(kk).m_temporalId;
+                if(tTid >= pcSlice->getTLayer())
+                {
+                  isSTSA=false;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if(isSTSA==true)
+        {
+          if(pcSlice->getTemporalLayerNonReferenceFlag())
+          {
+            pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_STSA_N);
+          }
+          else
+          {
+            pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_STSA_R);
+          }
+        }
+      }
+    }
+    arrangeLongtermPicturesInRPS(pcSlice, rcListPic);
+    TComRefPicListModification* refPicListModification = pcSlice->getRefPicListModification();
+    refPicListModification->setRefPicListModificationFlagL0(0);
+    refPicListModification->setRefPicListModificationFlagL1(0);
+    pcSlice->setNumRefIdx(REF_PIC_LIST_0,min(m_pcCfg->getGOPEntry(iGOPid).m_numRefPicsActive,pcSlice->getRPS()->getNumberOfPictures()));
+    pcSlice->setNumRefIdx(REF_PIC_LIST_1,min(m_pcCfg->getGOPEntry(iGOPid).m_numRefPicsActive,pcSlice->getRPS()->getNumberOfPictures()));
 
-	  if (pcSlice->getTLayer() > 0
-		  && !(pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RADL_N     // Check if not a leading picture
-		  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RADL_R
-		  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RASL_N
-		  || pcSlice->getNalUnitType() == NAL_UNIT_CODED_SLICE_RASL_R)
-		  )
-	  {
-		  if (pcSlice->isTemporalLayerSwitchingPoint(rcListPic) || pcSlice->getSPS()->getTemporalIdNestingFlag())
-		  {
-			  if (pcSlice->getTemporalLayerNonReferenceFlag())
-			  {
-				  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_TSA_N);
-			  }
-			  else
-			  {
-				  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_TSA_R);
-			  }
-		  }
-		  else if (pcSlice->isStepwiseTemporalLayerSwitchingPointCandidate(rcListPic))
-		  {
-			  Bool isSTSA = true;
-			  for (Int ii = iGOPid + 1; (ii < m_pcCfg->getGOPSize() && isSTSA == true); ii++)
-			  {
-				  Int lTid = m_pcCfg->getGOPEntry(ii).m_temporalId;
-				  if (lTid == pcSlice->getTLayer())
-				  {
-					  const TComReferencePictureSet* nRPS = pcSlice->getSPS()->getRPSList()->getReferencePictureSet(ii);
-					  for (Int jj = 0; jj < nRPS->getNumberOfPictures(); jj++)
-					  {
-						  if (nRPS->getUsed(jj))
-						  {
-							  Int tPoc = m_pcCfg->getGOPEntry(ii).m_POC + nRPS->getDeltaPOC(jj);
-							  Int kk = 0;
-							  for (kk = 0; kk < m_pcCfg->getGOPSize(); kk++)
-							  {
-								  if (m_pcCfg->getGOPEntry(kk).m_POC == tPoc)
-								  {
-									  break;
-								  }
-							  }
-							  Int tTid = m_pcCfg->getGOPEntry(kk).m_temporalId;
-							  if (tTid >= pcSlice->getTLayer())
-							  {
-								  isSTSA = false;
-								  break;
-							  }
-						  }
-					  }
-				  }
-			  }
-			  if (isSTSA == true)
-			  {
-				  if (pcSlice->getTemporalLayerNonReferenceFlag())
-				  {
-					  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_STSA_N);
-				  }
-				  else
-				  {
-					  pcSlice->setNalUnitType(NAL_UNIT_CODED_SLICE_STSA_R);
-				  }
-			  }
-		  }
-	  }
-	  arrangeLongtermPicturesInRPS(pcSlice, rcListPic);
-	  TComRefPicListModification* refPicListModification = pcSlice->getRefPicListModification();
-	  refPicListModification->setRefPicListModificationFlagL0(0);
-	  refPicListModification->setRefPicListModificationFlagL1(0);
-	  pcSlice->setNumRefIdx(REF_PIC_LIST_0, min(m_pcCfg->getGOPEntry(iGOPid).m_numRefPicsActive, pcSlice->getRPS()->getNumberOfPictures()));
-	  pcSlice->setNumRefIdx(REF_PIC_LIST_1, min(m_pcCfg->getGOPEntry(iGOPid).m_numRefPicsActive, pcSlice->getRPS()->getNumberOfPictures()));
+    //  Set reference list
+    pcSlice->setRefPicList ( rcListPic );
 
-	  //  Set reference list
-	  pcSlice->setRefPicList(rcListPic);
+    //  Slice info. refinement
+    if ( (pcSlice->getSliceType() == B_SLICE) && (pcSlice->getNumRefIdx(REF_PIC_LIST_1) == 0) )
+    {
+      pcSlice->setSliceType ( P_SLICE );
+    }
+    pcSlice->setEncCABACTableIdx(m_pcSliceEncoder->getEncCABACTableIdx());
 
-	  //  Slice info. refinement
-	  if ((pcSlice->getSliceType() == B_SLICE) && (pcSlice->getNumRefIdx(REF_PIC_LIST_1) == 0))
-	  {
-		  pcSlice->setSliceType(P_SLICE);
-	  }
-	  pcSlice->setEncCABACTableIdx(m_pcSliceEncoder->getEncCABACTableIdx());
-
-	  if (pcSlice->getSliceType() == B_SLICE)
-	  {
+    if (pcSlice->getSliceType() == B_SLICE)
+    {
 #if X0038_LAMBDA_FROM_QP_CAPABILITY
-		  const UInt uiColFromL0 = calculateCollocatedFromL0Flag(pcSlice);
-		  pcSlice->setColFromL0Flag(uiColFromL0);
+      const UInt uiColFromL0 = calculateCollocatedFromL0Flag(pcSlice);
+      pcSlice->setColFromL0Flag(uiColFromL0);
 #else
-		  pcSlice->setColFromL0Flag(1-uiColDir);
+      pcSlice->setColFromL0Flag(1-uiColDir);
 #endif
-		  Bool bLowDelay = true;
-		  Int  iCurrPOC = pcSlice->getPOC();
-		  Int iRefIdx = 0;
+      Bool bLowDelay = true;
+      Int  iCurrPOC  = pcSlice->getPOC();
+      Int iRefIdx = 0;
 
-		  for (iRefIdx = 0; iRefIdx < pcSlice->getNumRefIdx(REF_PIC_LIST_0) && bLowDelay; iRefIdx++)
-		  {
-			  if (pcSlice->getRefPic(REF_PIC_LIST_0, iRefIdx)->getPOC() > iCurrPOC)
-			  {
-				  bLowDelay = false;
-			  }
-		  }
-		  for (iRefIdx = 0; iRefIdx < pcSlice->getNumRefIdx(REF_PIC_LIST_1) && bLowDelay; iRefIdx++)
-		  {
-			  if (pcSlice->getRefPic(REF_PIC_LIST_1, iRefIdx)->getPOC() > iCurrPOC)
-			  {
-				  bLowDelay = false;
-			  }
-		  }
+      for (iRefIdx = 0; iRefIdx < pcSlice->getNumRefIdx(REF_PIC_LIST_0) && bLowDelay; iRefIdx++)
+      {
+        if ( pcSlice->getRefPic(REF_PIC_LIST_0, iRefIdx)->getPOC() > iCurrPOC )
+        {
+          bLowDelay = false;
+        }
+      }
+      for (iRefIdx = 0; iRefIdx < pcSlice->getNumRefIdx(REF_PIC_LIST_1) && bLowDelay; iRefIdx++)
+      {
+        if ( pcSlice->getRefPic(REF_PIC_LIST_1, iRefIdx)->getPOC() > iCurrPOC )
+        {
+          bLowDelay = false;
+        }
+      }
 
-		  pcSlice->setCheckLDC(bLowDelay);
-	  }
-	  else
-	  {
-		  pcSlice->setCheckLDC(true);
-	  }
+      pcSlice->setCheckLDC(bLowDelay);
+    }
+    else
+    {
+      pcSlice->setCheckLDC(true);
+    }
 
 #if !X0038_LAMBDA_FROM_QP_CAPABILITY
-	  uiColDir = 1-uiColDir;
+    uiColDir = 1-uiColDir;
 #endif
 
-	  //-------------------------------------------------------------
-	  pcSlice->setRefPOCList();
+    //-------------------------------------------------------------
+    pcSlice->setRefPOCList();
 
-	  pcSlice->setList1IdxToList0Idx();
+    pcSlice->setList1IdxToList0Idx();
 
-	  if (m_pcEncTop->getTMVPModeId() == 2)
-	  {
-		  if (iGOPid == 0) // first picture in SOP (i.e. forward B)
-		  {
-			  pcSlice->setEnableTMVPFlag(0);
-		  }
-		  else
-		  {
-			  // Note: pcSlice->getColFromL0Flag() is assumed to be always 0 and getcolRefIdx() is always 0.
-			  pcSlice->setEnableTMVPFlag(1);
-		  }
-	  }
-	  else if (m_pcEncTop->getTMVPModeId() == 1)
-	  {
-		  pcSlice->setEnableTMVPFlag(1);
-	  }
-	  else
-	  {
-		  pcSlice->setEnableTMVPFlag(0);
-	  }
+    if (m_pcEncTop->getTMVPModeId() == 2)
+    {
+      if (iGOPid == 0) // first picture in SOP (i.e. forward B)
+      {
+        pcSlice->setEnableTMVPFlag(0);
+      }
+      else
+      {
+        // Note: pcSlice->getColFromL0Flag() is assumed to be always 0 and getcolRefIdx() is always 0.
+        pcSlice->setEnableTMVPFlag(1);
+      }
+    }
+    else if (m_pcEncTop->getTMVPModeId() == 1)
+    {
+      pcSlice->setEnableTMVPFlag(1);
+    }
+    else
+    {
+      pcSlice->setEnableTMVPFlag(0);
+    }
+    
+    // set adaptive search range for non-intra-slices
+    if (m_pcCfg->getUseASR() && pcSlice->getSliceType()!=I_SLICE)
+    {
+      m_pcSliceEncoder->setSearchRange(pcSlice);
+    }
 
-	  // set adaptive search range for non-intra-slices
-	  if (m_pcCfg->getUseASR() && pcSlice->getSliceType() != I_SLICE)
-	  {
-		  m_pcSliceEncoder->setSearchRange(pcSlice);
-	  }
-
-	  Bool bGPBcheck = false;
-	  if (pcSlice->getSliceType() == B_SLICE)
-	  {
-		  if (pcSlice->getNumRefIdx(RefPicList(0)) == pcSlice->getNumRefIdx(RefPicList(1)))
-		  {
-			  bGPBcheck = true;
-			  Int i;
-			  for (i = 0; i < pcSlice->getNumRefIdx(RefPicList(1)); i++)
-			  {
-				  if (pcSlice->getRefPOC(RefPicList(1), i) != pcSlice->getRefPOC(RefPicList(0), i))
-				  {
-					  bGPBcheck = false;
-					  break;
-				  }
-			  }
-		  }
-	  }
-	  if (bGPBcheck)
-	  {
-		  pcSlice->setMvdL1ZeroFlag(true);
-	  }
-	  else
-	  {
-		  pcSlice->setMvdL1ZeroFlag(false);
-	  }
+    Bool bGPBcheck=false;
+    if ( pcSlice->getSliceType() == B_SLICE)
+    {
+      if ( pcSlice->getNumRefIdx(RefPicList( 0 ) ) == pcSlice->getNumRefIdx(RefPicList( 1 ) ) )
+      {
+        bGPBcheck=true;
+        Int i;
+        for ( i=0; i < pcSlice->getNumRefIdx(RefPicList( 1 ) ); i++ )
+        {
+          if ( pcSlice->getRefPOC(RefPicList(1), i) != pcSlice->getRefPOC(RefPicList(0), i) )
+          {
+            bGPBcheck=false;
+            break;
+          }
+        }
+      }
+    }
+    if(bGPBcheck)
+    {
+      pcSlice->setMvdL1ZeroFlag(true);
+    }
+    else
+    {
+      pcSlice->setMvdL1ZeroFlag(false);
+    }
 
 
-	  Double lambda = 0.0;
-	  Int actualHeadBits = 0;
-	  Int actualTotalBits = 0;
-	  Int estimatedBits = 0;
-	  Int tmpBitsBeforeWriting = 0;
-	  if (m_pcCfg->getUseRateCtrl()) // TODO: does this work with multiple slices and slice-segments?
-	  {
-		  Int frameLevel = m_pcRateCtrl->getRCSeq()->getGOPID2Level(iGOPid);
-		  if (pcPic->getSlice(0)->getSliceType() == I_SLICE)
-		  {
-			  frameLevel = 0;
-		  }
-		  m_pcRateCtrl->initRCPic(frameLevel);
-		  estimatedBits = m_pcRateCtrl->getRCPic()->getTargetBits();
+    Double lambda            = 0.0;
+    Int actualHeadBits       = 0;
+    Int actualTotalBits      = 0;
+    Int estimatedBits        = 0;
+    Int tmpBitsBeforeWriting = 0;
+    if ( m_pcCfg->getUseRateCtrl() ) // TODO: does this work with multiple slices and slice-segments?
+    {
+      Int frameLevel = m_pcRateCtrl->getRCSeq()->getGOPID2Level( iGOPid );
+      if ( pcPic->getSlice(0)->getSliceType() == I_SLICE )
+      {
+        frameLevel = 0;
+      }
+      m_pcRateCtrl->initRCPic( frameLevel );
+      estimatedBits = m_pcRateCtrl->getRCPic()->getTargetBits();
 
-		  if (m_pcRateCtrl->getCpbSaturationEnabled() && frameLevel != 0)
-		  {
-			  Int estimatedCpbFullness = m_pcRateCtrl->getCpbState() + m_pcRateCtrl->getBufferingRate();
+      if (m_pcRateCtrl->getCpbSaturationEnabled() && frameLevel != 0)
+      {
+        Int estimatedCpbFullness = m_pcRateCtrl->getCpbState() + m_pcRateCtrl->getBufferingRate();
 
-			  // prevent overflow
-			  if (estimatedCpbFullness - estimatedBits > (Int)(m_pcRateCtrl->getCpbSize()*0.9f))
-			  {
-				  estimatedBits = estimatedCpbFullness - (Int)(m_pcRateCtrl->getCpbSize()*0.9f);
-			  }
+        // prevent overflow
+        if (estimatedCpbFullness - estimatedBits > (Int)(m_pcRateCtrl->getCpbSize()*0.9f))
+        {
+          estimatedBits = estimatedCpbFullness - (Int)(m_pcRateCtrl->getCpbSize()*0.9f);
+        }
 
-			  estimatedCpbFullness -= m_pcRateCtrl->getBufferingRate();
-			  // prevent underflow
-			  if (estimatedCpbFullness - estimatedBits < m_pcRateCtrl->getRCPic()->getLowerBound())
-			  {
-				  estimatedBits = max(200, estimatedCpbFullness - m_pcRateCtrl->getRCPic()->getLowerBound());
-			  }
+        estimatedCpbFullness -= m_pcRateCtrl->getBufferingRate();
+        // prevent underflow
+        if (estimatedCpbFullness - estimatedBits < m_pcRateCtrl->getRCPic()->getLowerBound())
+        {
+          estimatedBits = max(200, estimatedCpbFullness - m_pcRateCtrl->getRCPic()->getLowerBound());
+        }
 
-			  m_pcRateCtrl->getRCPic()->setTargetBits(estimatedBits);
-		  }
+        m_pcRateCtrl->getRCPic()->setTargetBits(estimatedBits);
+      }
 
-		  Int sliceQP = m_pcCfg->getInitialQP();
-		  if ((pcSlice->getPOC() == 0 && m_pcCfg->getInitialQP() > 0) || (frameLevel == 0 && m_pcCfg->getForceIntraQP())) // QP is specified
-		  {
-			  Int    NumberBFrames = (m_pcCfg->getGOPSize() - 1);
-			  Double dLambda_scale = 1.0 - Clip3(0.0, 0.5, 0.05*(Double)NumberBFrames);
-			  Double dQPFactor = 0.57*dLambda_scale;
-			  Int    SHIFT_QP = 12;
-			  Int    bitdepth_luma_qp_scale = 0;
-			  Double qp_temp = (Double)sliceQP + bitdepth_luma_qp_scale - SHIFT_QP;
-			  lambda = dQPFactor*pow(2.0, qp_temp / 3.0);
-		  }
-		  else if (frameLevel == 0)   // intra case, but use the model
-		  {
-			  m_pcSliceEncoder->calCostSliceI(pcPic); // TODO: This only analyses the first slice segment - what about the others?
+      Int sliceQP = m_pcCfg->getInitialQP();
+      if ( ( pcSlice->getPOC() == 0 && m_pcCfg->getInitialQP() > 0 ) || ( frameLevel == 0 && m_pcCfg->getForceIntraQP() ) ) // QP is specified
+      {
+        Int    NumberBFrames = ( m_pcCfg->getGOPSize() - 1 );
+        Double dLambda_scale = 1.0 - Clip3( 0.0, 0.5, 0.05*(Double)NumberBFrames );
+        Double dQPFactor     = 0.57*dLambda_scale;
+        Int    SHIFT_QP      = 12;
+        Int    bitdepth_luma_qp_scale = 0;
+        Double qp_temp = (Double) sliceQP + bitdepth_luma_qp_scale - SHIFT_QP;
+        lambda = dQPFactor*pow( 2.0, qp_temp/3.0 );
+      }
+      else if ( frameLevel == 0 )   // intra case, but use the model
+      {
+        m_pcSliceEncoder->calCostSliceI(pcPic); // TODO: This only analyses the first slice segment - what about the others?
 
-			  if (m_pcCfg->getIntraPeriod() != 1)   // do not refine allocated bits for all intra case
-			  {
-				  Int bits = m_pcRateCtrl->getRCSeq()->getLeftAverageBits();
-				  bits = m_pcRateCtrl->getRCPic()->getRefineBitsForIntra(bits);
+        if ( m_pcCfg->getIntraPeriod() != 1 )   // do not refine allocated bits for all intra case
+        {
+          Int bits = m_pcRateCtrl->getRCSeq()->getLeftAverageBits();
+          bits = m_pcRateCtrl->getRCPic()->getRefineBitsForIntra( bits );
 
-				  if (m_pcRateCtrl->getCpbSaturationEnabled())
-				  {
-					  Int estimatedCpbFullness = m_pcRateCtrl->getCpbState() + m_pcRateCtrl->getBufferingRate();
+          if (m_pcRateCtrl->getCpbSaturationEnabled() )
+          {
+            Int estimatedCpbFullness = m_pcRateCtrl->getCpbState() + m_pcRateCtrl->getBufferingRate();
 
-					  // prevent overflow
-					  if (estimatedCpbFullness - bits > (Int)(m_pcRateCtrl->getCpbSize()*0.9f))
-					  {
-						  bits = estimatedCpbFullness - (Int)(m_pcRateCtrl->getCpbSize()*0.9f);
-					  }
+            // prevent overflow
+            if (estimatedCpbFullness - bits > (Int)(m_pcRateCtrl->getCpbSize()*0.9f))
+            {
+              bits = estimatedCpbFullness - (Int)(m_pcRateCtrl->getCpbSize()*0.9f);
+            }
 
-					  estimatedCpbFullness -= m_pcRateCtrl->getBufferingRate();
-					  // prevent underflow
-					  if (estimatedCpbFullness - bits < m_pcRateCtrl->getRCPic()->getLowerBound())
-					  {
-						  bits = estimatedCpbFullness - m_pcRateCtrl->getRCPic()->getLowerBound();
-					  }
-				  }
+            estimatedCpbFullness -= m_pcRateCtrl->getBufferingRate();
+            // prevent underflow
+            if (estimatedCpbFullness - bits < m_pcRateCtrl->getRCPic()->getLowerBound())
+            {
+              bits = estimatedCpbFullness - m_pcRateCtrl->getRCPic()->getLowerBound();
+            }
+          }
 
-				  if (bits < 200)
-				  {
-					  bits = 200;
-				  }
-				  m_pcRateCtrl->getRCPic()->setTargetBits(bits);
-			  }
+          if ( bits < 200 )
+          {
+            bits = 200;
+          }
+          m_pcRateCtrl->getRCPic()->setTargetBits( bits );
+        }
 
-			  list<TEncRCPic*> listPreviousPicture = m_pcRateCtrl->getPicList();
-			  m_pcRateCtrl->getRCPic()->getLCUInitTargetBits();
-			  lambda = m_pcRateCtrl->getRCPic()->estimatePicLambda(listPreviousPicture, pcSlice->getSliceType());
-			  sliceQP = m_pcRateCtrl->getRCPic()->estimatePicQP(lambda, listPreviousPicture);
-		  }
-		  else    // normal case
-		  {
-			  list<TEncRCPic*> listPreviousPicture = m_pcRateCtrl->getPicList();
-			  lambda = m_pcRateCtrl->getRCPic()->estimatePicLambda(listPreviousPicture, pcSlice->getSliceType());
-			  sliceQP = m_pcRateCtrl->getRCPic()->estimatePicQP(lambda, listPreviousPicture);
-		  }
+        list<TEncRCPic*> listPreviousPicture = m_pcRateCtrl->getPicList();
+        m_pcRateCtrl->getRCPic()->getLCUInitTargetBits();
+        lambda  = m_pcRateCtrl->getRCPic()->estimatePicLambda( listPreviousPicture, pcSlice->getSliceType());
+        sliceQP = m_pcRateCtrl->getRCPic()->estimatePicQP( lambda, listPreviousPicture );
+      }
+      else    // normal case
+      {
+        list<TEncRCPic*> listPreviousPicture = m_pcRateCtrl->getPicList();
+        lambda  = m_pcRateCtrl->getRCPic()->estimatePicLambda( listPreviousPicture, pcSlice->getSliceType());
+        sliceQP = m_pcRateCtrl->getRCPic()->estimatePicQP( lambda, listPreviousPicture );
+      }
 
-		  sliceQP = Clip3(-pcSlice->getSPS()->getQpBDOffset(CHANNEL_TYPE_LUMA), MAX_QP, sliceQP);
-		  m_pcRateCtrl->getRCPic()->setPicEstQP(sliceQP);
+      sliceQP = Clip3( -pcSlice->getSPS()->getQpBDOffset(CHANNEL_TYPE_LUMA), MAX_QP, sliceQP );
+      m_pcRateCtrl->getRCPic()->setPicEstQP( sliceQP );
 
-		  m_pcSliceEncoder->resetQP(pcPic, sliceQP, lambda);
-	  }
+      m_pcSliceEncoder->resetQP( pcPic, sliceQP, lambda );
+    }
 
-	  UInt uiNumSliceSegments = 1;
+    UInt uiNumSliceSegments = 1;
 
-	  // Allocate some coders, now the number of tiles are known.
-	  const Int numSubstreamsColumns = (pcSlice->getPPS()->getNumTileColumnsMinus1() + 1);
-	  const Int numSubstreamRows = pcSlice->getPPS()->getEntropyCodingSyncEnabledFlag() ? pcPic->getFrameHeightInCtus() : (pcSlice->getPPS()->getNumTileRowsMinus1() + 1);
-	  const Int numSubstreams = numSubstreamRows * numSubstreamsColumns;
-	  std::vector<TComOutputBitstream> substreamsOut(numSubstreams);
-#if HYZ_OF_FRAME
-	  BitDepths tmpB = pcPic->getPicSym()->getSPS().getBitDepths();
-	  UInt height = pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples();
-	  UInt width = pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples();
-	  TComPicYuv* orgP = pcPic->getPicYuvOrg();
-	  cv::Mat curImg;
-	  curImg.create(height * 3 / 2, width, CV_8UC1);
-	  pcPic->getPicYuvOrg()->dump2((UChar*)curImg.data, tmpB);
-	  cv::Mat rgbImg;
-	  cv::cvtColor(curImg, rgbImg, CV_YUV2BGR_I420);
-	  Int curPOC = pcPic->getPOC();
-	  std::string fileName = std::to_string(curPOC) + ".png";
-	  cv::imwrite(fileName, rgbImg);
-	  globalOData.picH = height;
-	  globalOData.picW = width;
-	  if (curPOC != 0)// For POC 0, we have to way to calculate its optical flow~
-	  {
-		  std::string dstName = std::to_string(globalOData.getPrevPOC()) + ".png ";
-		  std::string srcName = std::to_string(curPOC) + ".png ";
-		  std::string modelName = "pwcnet.ckpt-595000";
-		  std::string cmd_string = "D:\\hyz\\Anaconda3\\envs\\pwc\\python.exe tfoptflow\\pwcnet_predict_from_img_pairs.py ";
-		  cmd_string += dstName;
-		  cmd_string += srcName;
-		  cmd_string += modelName;
-		  std::cout << cmd_string << endl;
-		  //FILE* fp = _popen(cmd_string.c_str(), "r");
-		  FILE* fp = _popen(cmd_string.c_str(), "r");
-		  char buf[255];
-		  while (fgets(buf, 255, fp) != NULL)
-		  {
-			  std::cout << buf;
-		  }
-		  _pclose(fp);
-		  std::string optflowName = "opt.log";
-		  std::ifstream fin(optflowName);
+    // Allocate some coders, now the number of tiles are known.
+    const Int numSubstreamsColumns = (pcSlice->getPPS()->getNumTileColumnsMinus1() + 1);
+    const Int numSubstreamRows     = pcSlice->getPPS()->getEntropyCodingSyncEnabledFlag() ? pcPic->getFrameHeightInCtus() : (pcSlice->getPPS()->getNumTileRowsMinus1() + 1);
+    const Int numSubstreams        = numSubstreamRows * numSubstreamsColumns;
+    std::vector<TComOutputBitstream> substreamsOut(numSubstreams);
 
-		  Float Fx, Fy;
-		  fin >> Fx >> Fy;
-		  std::cout << Fx << " " << Fy << endl;
-		  fin.close();
-		  globalOData.set(curPOC, Fx, Fy);// Remember that we will update the "prevPOC" field each time we call the "set" function
-		  // Then we should use python to calculate the optical flow!
+#if HYZ_RA
+	BitDepths tmpB = pcPic->getPicSym()->getSPS().getBitDepths();
+	UInt height = pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples();
+	UInt width = pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples();
+	TComPicYuv* orgP = pcPic->getPicYuvOrg();
+	cv::Mat curImg;
+	curImg.create(height * 3 / 2, width, CV_8UC1);
+	pcPic->getPicYuvOrg()->dump2((UChar*)curImg.data, tmpB);
+	cv::Mat rgbImg;
+	cv::cvtColor(curImg, rgbImg, CV_YUV2BGR_I420);
+	Int curPOC = pcPic->getPOC();
+	std::string fileName = std::to_string(curPOC) + ".png";
+	cv::imwrite(fileName, rgbImg);
+	if (curPOC == 0)
+	{
+		// We will init the iku(global variables...
+		iku.picH = height;
+		iku.picW = width;
+		iku.FrameWidthInCtus = pcPic->getPicSym()->getFrameWidthInCtus();
+		iku.width = width;
+		iku.height = height;
+		iku.maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
+		iku.maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
 	}
-#elif HYZ_OF_CTU
-	  BitDepths tmpB = pcPic->getPicSym()->getSPS().getBitDepths();
-	  UInt height = pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples();
-	  UInt width = pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples();
-	  TComPicYuv* orgP = pcPic->getPicYuvOrg();
-	  cv::Mat curImg;
-	  curImg.create(height * 3 / 2, width, CV_8UC1);
-	  pcPic->getPicYuvOrg()->dump2((UChar*)curImg.data, tmpB);
-	  cv::Mat rgbImg;
-	  cv::cvtColor(curImg, rgbImg, CV_YUV2BGR_I420);
-	  globalOData.curImg = rgbImg;
-	  Int curPOC = pcPic->getPOC();
-	  std::string fileName = std::to_string(curPOC) + ".png";
-	  cv::imwrite(fileName, rgbImg);
-	  if (curPOC != 0)// For POC 0, we have to way to calculate its optical flow~
-	  {
-		  std::string dstName = std::to_string(globalOData.getPrevPOC()) + ".png ";
-		  std::string srcName = std::to_string(curPOC) + ".png ";
-		  std::string modelName = "pwcnet.ckpt-595000";
-		  std::string cmd_string = "D:\\hyz\\Anaconda3\\envs\\pwc\\python.exe tfoptflow\\pwcnet_predict_from_img_pairs.py ";
-		  cmd_string += dstName;
-		  cmd_string += srcName;
-		  cmd_string += modelName;
-		  std::cout << cmd_string << endl;
-		  //FILE* fp = _popen(cmd_string.c_str(), "r");
-		  FILE* fp = _popen(cmd_string.c_str(), "r");
-		  char buf[255];
-		  while (fgets(buf, 255, fp) != NULL)
-		  {
-			  std::cout << buf;
-		  }
-		  _pclose(fp);
-		  Float Fx, Fy;
-		  //Then we should use the optical file to store
-		  string xFlowName = "x.flow";
-		  string yFlowName = "y.flow";
-		  std::ifstream xFin(xFlowName);
-		  std::ifstream yFin(yFlowName);
-		  cv::Mat opMap = cv::Mat(height, width, CV_32FC3, cv::Scalar(0));// In fact we only use the first channel
-		  for (UInt i = 0; i < height; ++i)
-		  {
-			  for (UInt j = 0; j < width; ++j)
-			  {
-				  xFin >> Fx;
-				  yFin >> Fy;
-				  opMap.at<cv::Vec3f>(i, j)[0] = Fx;
-				  opMap.at<cv::Vec3f>(i, j)[1] = Fy;
-			  }
-		  }
-		  xFin.close();
-		  yFin.close();
-		  Int tmpPrev = globalOData.getPrevPOC();
-		  // Then we shoud add this optical data to the OData
-		  globalOData.updateMap(curPOC, opMap);// OK, here we finish update the optical map
-		  
-		  // Below is for test insert and query
-#if HYZ_DUMP_OF
-		  cv::Mat tmpM = globalOData.getMap(curPOC, 0);
-		  cv::Mat dumpMap = cv::Mat(height, width, CV_32FC3, cv::Scalar(100, 100, 100));
-		  cv::scaleAdd(tmpM, 2.0, dumpMap, dumpMap);
-		  cv::Mat dumpOK = cv::Mat(height, width, CV_8UC1);
-		  for (UInt i = 0; i < height; ++i)
-		  {
-			  for (UInt j = 0; j < width; ++j)
-			  {
-
-				  dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[0];
-				  /*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
-				  cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
-			  }
-		  }
-		  cv::imwrite("op/" + to_string(curPOC) + "dumpX.png", dumpOK);
-		  for (UInt i = 0; i < height; ++i)
-		  {
-			  for (UInt j = 0; j < width; ++j)
-			  {
-
-				  dumpOK.at<unsigned char>(i, j) = (unsigned char)dumpMap.at<cv::Vec3f>(i, j)[1];
-				  /*unsigned char tmp = dumpOK.at<unsigned char>(i, j);
-				  cout << (int)dumpOK.at<unsigned char>(i, j) << endl;*/
-			  }
-		  }
-		  cv::imwrite("op/" + to_string(curPOC) + "dumpY.png", dumpOK);
-#endif
-	  }
-	  else
-	  {
-		  globalOData.shapes.push_back(height);
-		  globalOData.shapes.push_back(width);
-		  globalOData.shapes.push_back(3);
-		  globalOData.picH = height;
-		  globalOData.picW = width;
-	  }
+	else
+	{
+		for (UInt i = 0; i < curPOC; ++i)
+		{
+			iku.updateMap(i, curPOC);
+		}
+	}
 #endif
     // now compress (trial encode) the various slice segments (slices, and dependent slices)
     {
@@ -1908,7 +1690,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     m_pcEntropyCoder->setBitstream(NULL);
 
     pcSlice = pcPic->getSlice(0);
-    // Have to pay attention to this part, seems that we can print CU infos here .iku 520
+
     if (pcSlice->getSPS()->getUseSAO())
     {
       Bool sliceEnabled[MAX_NUM_COMPONENT];
@@ -1933,34 +1715,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
         pcPic->getSlice(s)->setSaoEnabledFlag(CHANNEL_TYPE_CHROMA, sliceEnabled[COMPONENT_Cb]);
       }
     }
-	std::cout << pcSlice->getPOC() << endl;
-#if HYZ_PU_T_MERGE_FLAG   
-    // Ohhhh, I misunderstand the meaning of Xia, the meaning is that, up to now we have finish all the work for this frame!
-    // Hmat<unsigned char> out_mat(pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples(), pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples);
-    UInt startCtuTsAddr;
-    UInt boundingCtuTsAddr;
-    pcSlice->setSliceSegmentBits(0);
-    m_pcSliceEncoder->xDetermineStartAndBoundingCtuTsAddr(startCtuTsAddr, boundingCtuTsAddr, pcPic);
 
-	int* p = new int(4);
-	for (int i = 0; i < 4; ++i)
-	{
-		p[i] = 0;
-	}
-    for (UInt ctuTsAddr = startCtuTsAddr; ctuTsAddr < boundingCtuTsAddr; ++ctuTsAddr)
-    {
-      const UInt ctuRsAddr = pcPic->getPicSym()->getCtuTsToRsAddrMap(ctuTsAddr);
-      TComDataCU* pCtu = pcPic->getCtu(ctuRsAddr);
-      // printCTUInfo(pCtu, 0, 0);
-      printPUInfo(pCtu, 0, 0, &p);
-    }
-	cout << "Total:" << p[0] << endl;
-	/*cout << " Merge PU: " << p[1] << ", temporal PU: " << p[2] << " rate: " << (float)p[2] / (0.1 + (float)p[1]) << endl;
-	cout << " AMVP PU: " << p[0] - p[1] << ", temporal PU: " << p[3] << " rate: " << (float)p[3] / (0.1 + (float)(p[0] - p[1])) << endl;*/
-	cout << " Merge PU: " << p[1] << ", temporal PU: " << p[2] << " rate: " << (float)p[2] / (0.1 + (float)p[0]) << endl;
-	cout << " AMVP PU: " << p[0] - p[1] << ", temporal PU: " << p[3] << " rate: " << (float)p[3] / (0.1 + (float)(p[0])) << endl;
-	//delete[] p;
-#endif
     // pcSlice is currently slice 0.
     std::size_t binCountsInNalUnits   = 0; // For implementation of cabac_zero_word stuffing (section 7.4.3.10)
     std::size_t numBytesInVclNalUnits = 0; // For implementation of cabac_zero_word stuffing (section 7.4.3.10)

@@ -44,11 +44,14 @@
 //! \{
 
 #include "../Lib/TLibCommon/Debug.h"
-#include "../Lib/TLibCommon/OData.h"
+#include "../Lib/TLibCommon/Opt.h"
+#include "../Lib/TLibCommon/hyz.h"
 // ====================================================================================================================
 // Main function
 // ====================================================================================================================
-OData globalOData(1000);
+#if HYZ_RA
+Opt iku;
+#endif
 int main(int argc, char* argv[])
 {
   TAppEncTop  cTAppEncTop;

@@ -2906,7 +2906,7 @@ Void TEncSearch::xRestrictBipredMergeCand( TComDataCU* pcCU, UInt puIdx, TComMvF
   }
 }
 
-//! search of the best candidate for inter prediction, And this is called in many places, I think this is what mainly to be modified .iku 520
+//! search of the best candidate for inter prediction
 #if AMP_MRG
 Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, TComYuv* pcResiYuv, TComYuv* pcRecoYuv DEBUG_STRING_FN_DECLARE(sDebug), Bool bUseRes, Bool bUseMRG )
 #else
@@ -2996,7 +2996,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
     xGetBlkBits( ePartSize, pcCU->getSlice()->isInterP(), iPartIdx, uiLastMode, uiMbBits);
 
     pcCU->getPartIndexAndSize( iPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
-	// Ok , we only need to call this function to get the PU's high and width!
+
 #if AMP_MRG
     Bool bTestNormalMC = true;
 
@@ -3009,8 +3009,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
     {
 #endif
 
-    //  Uni-directional prediction, Bellow we will do bi-direction prediction for SliceB .iku 520
-    // iNumPredDir is 1/2 depends hether is is P/B frame
+    //  Uni-directional prediction
     for ( Int iRefList = 0; iRefList < iNumPredDir; iRefList++ )
     {
       RefPicList  eRefPicList = ( iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0 );
@@ -3038,7 +3037,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
         }
 
         uiBitsTemp += m_auiMVPIdxCost[aaiMvpIdx[iRefList][iRefIdxTemp]][AMVP_MAX_NUM_CANDS];
-        // Use the GBD techonology, then skip the ME stage .iku 520
+
         if ( m_pcEncCfg->getFastMEForGenBLowDelayEnabled() && iRefList == 1 )    // list 1
         {
           if ( pcCU->getSlice()->getList1IdxToList0Idx( iRefIdxTemp ) >= 0 )
@@ -3059,7 +3058,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
           }
         }
         else
-        {// The begin the Motion estimation .iku 520
+        {
           xMotionEstimation ( pcCU, pcOrgYuv, iPartIdx, eRefPicList, &cMvPred[iRefList][iRefIdxTemp], iRefIdxTemp, cMvTemp[iRefList][iRefIdxTemp], uiBitsTemp, uiCostTemp );
         }
         xCopyAMVPInfo(pcCU->getCUMvField(eRefPicList)->getAMVPInfo(), &aacAMVPInfo[iRefList][iRefIdxTemp]); // must always be done ( also when AMVP_MODE = AM_NONE )
@@ -3092,7 +3091,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
       }
     }
 
-    //  Bi-predictive Motion estimation. check if it is 8x8 PU and split mode is 2Nx2N
+    //  Bi-predictive Motion estimation
     if ( (pcCU->getSlice()->isInterB()) && (pcCU->isBipredRestriction(iPartIdx) == false) )
     {
 
@@ -3333,7 +3332,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 #if AMP_MRG
     } // end if bTestNormalMC
 #endif
-    // If partition mode is not 2Nx2N... .iku 520
+
     if ( pcCU->getPartitionSize( uiPartAddr ) != SIZE_2Nx2N )
     {
       UInt uiMRGInterDir = 0;
@@ -3349,7 +3348,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
       // calculate ME cost
       Distortion uiMEError = std::numeric_limits<Distortion>::max();
       Distortion uiMECost  = std::numeric_limits<Distortion>::max();
-      // Calculate for the ME cost
+
       if (bTestNormalMC)
       {
         xGetInterPredictionError( pcCU, pcOrgYuv, iPartIdx, uiMEError, m_pcEncCfg->getUseHADME() );
@@ -3409,7 +3408,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 }
 
 
-// AMVP, we will choose the MVP from the MV candidate list .iku 520
+// AMVP
 Void TEncSearch::xEstimateMvPredAMVP( TComDataCU* pcCU, TComYuv* pcOrgYuv, UInt uiPartIdx, RefPicList eRefPicList, Int iRefIdx, TComMv& rcMvPred, Bool bFilled, Distortion* puiDistBiP )
 {
   AMVPInfo*  pcAMVPInfo = pcCU->getCUMvField(eRefPicList)->getAMVPInfo();
@@ -3424,39 +3423,12 @@ Void TEncSearch::xEstimateMvPredAMVP( TComDataCU* pcCU, TComYuv* pcOrgYuv, UInt 
   Int        i;
 
   pcCU->getPartIndexAndSize( uiPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
-  //OK iRoiWidth and iRoiHeight is the shape if the PU
-#if HYZ_PU_POS
-  cout << uiPartIdx << " " << uiPartAddr << " " << iRoiWidth << " " << iRoiHeight << endl;
-#endif
+  // Fill the MV Candidates
+  if (!bFilled)
+  {
+    pcCU->fillMvpCand( uiPartIdx, uiPartAddr, eRefPicList, iRefIdx, pcAMVPInfo );
+  }
 
-#if HYZ_PU_T_MERGE_FLAG
-  // OK! we now now in LDB, the eRefPicList will always be the REF_PIC_LIST_0!!!!!!!!!!!!!!!!!!!!!!!!
-  pcCU->t_index = -1;
-  // Fill the MV Candidates
-  if (!bFilled)// Checlk if the candidate list is full
-  {// This part I also need to care, because different from Merge mode, Here we use different function to fill the candidate list
-    pcCU->fillMvpCand( uiPartIdx, uiPartAddr, eRefPicList, iRefIdx, pcAMVPInfo );
-  }
-  if (pcCU->t_index == -1)
-  {// Here we double check if the temporal_index is really got
-    printf("Wrong, in AMVP position, the temporal_index is still -1!\n");
-    exit(1);
-  }
-  else if (pcCU->t_index == -2)
-  {
-	  pcCU->setTFlagSubParts1(255, uiPartAddr, uiPartIdx, pcCU->getDepth(uiPartAddr));
-  }
-  else
-  {
-	  pcCU->setTFlagSubParts1(pcCU->t_index, uiPartAddr, uiPartIdx, pcCU->getDepth(uiPartAddr));
-  }
-#else
-  // Fill the MV Candidates
-  if (!bFilled)// Checlk if the candidate list is full
-  {// This part I also need to care, because different from Merge mode, Here we use different function to fill the candidate list
-    pcCU->fillMvpCand( uiPartIdx, uiPartAddr, eRefPicList, iRefIdx, pcAMVPInfo );
-  }
-#endif
   // initialize Mvp index & Mvp
   iBestIdx = 0;
   cBestMv  = pcAMVPInfo->m_acMvCand[0];
@@ -3661,7 +3633,7 @@ Distortion TEncSearch::xGetTemplateCost( TComDataCU* pcCU,
   TComPicYuv* pcPicYuvRef = pcCU->getSlice()->getRefPic( eRefPicList, iRefIdx )->getPicYuvRec();
 
   pcCU->clipMv( cMvCand );
-  //cv::Mat tmp = cv::Mat(128, 128, CV_8UC1, pcOrgYuv->getAddr(COMPONENT_Y));
+
   // prediction pattern
   if ( pcCU->getSlice()->testWeightPred() && pcCU->getSlice()->getSliceType()==P_SLICE )
   {

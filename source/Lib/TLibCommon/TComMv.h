@@ -40,15 +40,13 @@
 
 #include "CommonDef.h"
 #include "hyz.h"
-#include "OData.h"
-extern OData globalOData;
 //! \ingroup TLibCommon
 //! \{
 
 // ====================================================================================================================
 // Class definition
 // ====================================================================================================================
-//extern OData globalOData;
+
 /// basic motion vector class
 class TComMv
 {
@@ -159,81 +157,18 @@ public:
     return (m_iHor!=rcMv.m_iHor || m_iVer!=rcMv.m_iVer);
   }
 
-  
-#if HYZ_OF_FRAME
-#if HYZ_OF_ONE_DIR
-  const TComMv scaleMv(Int iScale) const
+  const TComMv scaleMv( Int iScale ) const
   {
-	  Int mvx = iScale * getHor();
-	  Int mvy = iScale * getVer();
-	  return TComMv( mvx, mvy );
+    Int mvx = Clip3( -32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8 );
+    Int mvy = Clip3( -32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8 );
+    return TComMv( mvx, mvy );
   }
-#else
-  const TComMv scaleMv(Float iScaleX, Float iScaleY, Float ori) const
-  {
-	  /*Int mvx = Clip3(-32768, 32767, (iScaleX * getHor() + 127 + (iScaleX * getHor() < 0)) >> 8);
-	  Int mvy = Clip3(-32768, 32767, (iScaleY * getVer() + 127 + (iScaleY * getVer() < 0)) >> 8);*/
-	  Int mvx = Int(Float(iScaleX) * Float(getHor()));
-	  Int mvy = Int(Float(iScaleY) * Float(getVer()));
-	  Int iScale = (Int)ori;
-	  Int mvx2 = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	  Int mvy2 = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
-	  if (iScale == 4096)
-	  {
-		  mvx2 = getHor();
-		  mvy2 = getVer();
-	  }
-	  
-	  //std::cout << mvx << " VS: " << mvx2 << "  " << mvy << " VS: " << mvy2 << std::endl;
-	  return TComMv(mvx, mvy);
-  }
-#endif
-#elif HYZ_OF_CTU
-  const TComMv scaleMv_ori(Int iScale) const
-  {
-	  Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
 
-	  return TComMv(mvx, mvy);
-  }
-  //const TComMv scaleMv(Float hm, Float x, Float y, Int iScale) const // I decide to avoiding using this function for its unclear meaning
-  //{
-	 // Int mvx = Int((Float)getHor() * x);
-	 // Int mvy = Int((Float)getVer() * y);
-	 // mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	 // mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
-	 // 
-	 // return TComMv(mvx, mvy);
-  //}
- /* const TComMv scaleMv(Float hm, Float x, Float y) const // I decide to avoiding using this function for its unclear meaning
+#if HYZ_RA
+  const TComMv scaleMv(Float sx, Float sy) const
   {
-	  Int mvx = getHor();
-	  Int mvy = getVer();
-	  mvx = Int((Float)mvx * x);
-	  mvy = Int((Float)mvy * y);
-	  return TComMv(mvx, mvy);
-  }*/
-  const TComMv scaleMv_deep(Float hm, Float x, Float y) const// We strongly recommend to use this function!
-  {
-	  Int mvx = getHor();
-	  Int mvy = getVer();
-	  mvx = Int((Float)mvx * x);
-	  mvy = Int((Float)mvy * y);
-	  return TComMv(mvx, mvy);
-  }
-  const TComMv scaleMv_deep(Float x, Float y) const// We strongly recommend to use this function!
-  {
-	  Int mvx = getHor();
-	  Int mvy = getVer();
-	  mvx = Int((Float)mvx * x);
-	  mvy = Int((Float)mvy * y);
-	  return TComMv(mvx, mvy);
-  }
-#else
-  const TComMv scaleMv(Int iScale) const
-  {
-	  Int mvx = Clip3(-32768, 32767, (iScale * getHor() + 127 + (iScale * getHor() < 0)) >> 8);
-	  Int mvy = Clip3(-32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8);
+	  Int mvx = (Int)(((Float)getHor()) * sx);
+	  Int mvy = (Int)(((Float)getVer()) * sy);
 	  return TComMv(mvx, mvy);
   }
 #endif

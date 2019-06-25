@@ -275,7 +275,7 @@ Void TComPicYuv::extendPicBorder ()
   m_bIsBorderExtended = true;
 }
 
-#if HYZ_OF_FRAME | HYZ_OF_CTU
+#if HYZ_RA
 Void  TComPicYuv::dump2(UChar* p, const BitDepths &bitDepths)
 {
 
@@ -287,7 +287,7 @@ Void  TComPicYuv::dump2(UChar* p, const BitDepths &bitDepths)
 		const Int          height = getHeight(compId);
 		const Int          width = getWidth(compId);
 
-	
+
 		const Int shift = bitDepths.recon[toChannelType(compId)] - 8;
 		const Int offset = (shift>0) ? (1 << (shift - 1)) : 0;
 		for (Int y = 0; y < height; y++)

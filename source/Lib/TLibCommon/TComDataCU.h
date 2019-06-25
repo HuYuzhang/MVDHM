@@ -49,13 +49,10 @@
 #include "TComRdCost.h"
 #include "TComPattern.h"
 #include "hyz.h"
+#include "Opt.h"
 //! \ingroup TLibCommon
 //! \{
-#if HYZ_OF_FRAME | HYZ_OF_CTU
-#include <opencv2\core\core.hpp>
-#include <opencv2\opencv.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
-#endif
+
 class TComTU; // forward declaration
 
 static const UInt NUM_MOST_PROBABLE_MODES=3;
@@ -130,10 +127,7 @@ private:
   // -------------------------------------------------------------------------------------------------------------------
   // coding tool information
   // -------------------------------------------------------------------------------------------------------------------
-#if HYZ_PU_T_MERGE_FLAG
-  UChar*         t_use1;
-  UChar*         t_use2;
-#endif
+
   Bool*         m_pbMergeFlag;                          ///< array of merge flags
   UChar*        m_puhMergeIndex;                        ///< array of merge candidate indices
 #if AMP_MRG
@@ -164,31 +158,17 @@ protected:
   Bool          xAddMVPCandWithScaling        ( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir ) const;
 
   Void          deriveRightBottomIdx          ( UInt uiPartIdx, UInt& ruiPartIdxRB ) const;
-#if HYZ_MERGE_AVP_SPLIT
-  Bool          xGetColMVP_merge(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const;
-  Bool          xGetColMVP_amvp (const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const;
-#else
-  Bool          xGetColMVP(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx) const;
-#endif
+  Bool          xGetColMVP                    ( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const;
+  Bool          xGetColMVP                     (const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx, PUPos p) const;
 
   /// compute scaling factor from POC difference
-#if HYZ_OF_FRAME
-  static Void    xGetDistScaleFactor( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, Float** p );
-#elif HYZ_OF_CTU
-  // We have to provide the two (X,Y) pairs, which is the position of the two CTU
-  //static Int    xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, const TComDataCU* curP = NULL, Int curCTU = -1, Int colCTU = -1);
-  //static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
   static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
-
-#else
-  static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
+#if HYZ_RA
+  static TComMv    xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, PUPos curPU);
 #endif
   Void          xDeriveCenterIdx              ( UInt uiPartIdx, UInt& ruiPartIdxCenter ) const;
 
 public:
-#if HYZ_PU_T_MERGE_FLAG
-  Int            t_index;// Sad... I must declare it here, or I can't access it directlly
-#endif
                 TComDataCU();
   virtual       ~TComDataCU();
 
@@ -237,6 +217,7 @@ public:
   // -------------------------------------------------------------------------------------------------------------------
   // member functions for CU data
   // -------------------------------------------------------------------------------------------------------------------
+
   SChar*        getPartitionSize              ( )                                                          { return m_pePartSize;                       }
   PartSize      getPartitionSize              ( UInt uiIdx ) const                                         { return static_cast<PartSize>( m_pePartSize[uiIdx] ); }
   Void          setPartitionSize              ( UInt uiIdx, PartSize uh )                                  { m_pePartSize[uiIdx] = uh;                  }
@@ -341,17 +322,6 @@ public:
   Void          setMergeFlag                  ( UInt uiIdx, Bool b )                                       { m_pbMergeFlag[uiIdx] = b;                  }
   Void          setMergeFlagSubParts          ( Bool bMergeFlag, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
 
-#if HYZ_PU_T_MERGE_FLAG
-  UChar*        getTFlag1                     ()                                                            { return t_use1; }
-  UChar         getTFlag1                     (UInt uiIdx) const                                            { return t_use1[uiIdx]; }                                                   
-  Void          setTFlag1                     (UInt uiIdx, UChar b)                                         { t_use1[uiIdx] = b;}
-  Void          setTFlagSubParts1             ( UInt uiMergeIndex, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
-
-  UChar*        getTFlag2                     ()                                                            { return t_use2; }
-  UChar         getTFlag2                     (UInt uiIdx) const                                            { return t_use2[uiIdx]; }                                                   
-  Void          setTFlag2                     (UInt uiIdx, UChar b)                                         { t_use2[uiIdx] = b;}
-  Void          setTFlagSubParts2             ( UInt uiMergeIndex, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
-#endif
   UChar*        getMergeIndex                 ( )                                                          { return m_puhMergeIndex;                    }
   UChar         getMergeIndex                 ( UInt uiIdx ) const                                         { return m_puhMergeIndex[uiIdx];             }
   Void          setMergeIndex                 ( UInt uiIdx, UInt uiMergeIndex )                            { m_puhMergeIndex[uiIdx] = uiMergeIndex;     }
@@ -395,11 +365,7 @@ public:
 
   static Void   getMvField                    ( const TComDataCU* pcCU, UInt uiAbsPartIdx, RefPicList eRefPicList, TComMvField& rcMvField );
 
-#if HYZ_PU_T_MERGE_FLAG
-Void            fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo );
-#else
-Void            fillMvpCand ( const UInt partIdx, const UInt partAddr, const RefPicList eRefPicList, const Int refIdx, AMVPInfo* pInfo ) const;
-#endif  
+  Void          fillMvpCand                   ( const UInt uiPartIdx, const UInt uiPartAddr, const RefPicList eRefPicList, const Int iRefIdx, AMVPInfo* pInfo ) const;
   Bool          isDiffMER                     ( Int xN, Int yN, Int xP, Int yP ) const;
   Void          getPartPosition               ( UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int& nPSH ) const;
 
@@ -463,11 +429,8 @@ Void            fillMvpCand ( const UInt partIdx, const UInt partAddr, const Ref
   Void          deriveLeftBottomIdx           ( UInt uiPartIdx, UInt& ruiPartIdxLB ) const;
 
   Bool          hasEqualMotion                ( UInt uiAbsPartIdx, const TComDataCU* pcCandCU, UInt uiCandAbsPartIdx ) const;
-#if HYZ_PU_T_MERGE_FLAG
-  Void          getInterMergeCandidates       ( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx = -1 );
-#else
   Void          getInterMergeCandidates       ( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx = -1 ) const;
-#endif
+
   Void          deriveLeftRightTopIdxGeneral  ( UInt uiAbsPartIdx, UInt uiPartIdx, UInt& ruiPartIdxLT, UInt& ruiPartIdxRT ) const;
   Void          deriveLeftBottomIdxGeneral    ( UInt uiAbsPartIdx, UInt uiPartIdx, UInt& ruiPartIdxLB ) const;
 

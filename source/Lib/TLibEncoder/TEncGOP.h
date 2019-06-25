@@ -61,10 +61,11 @@
 #include "TEncAnalyze.h"
 #include "TEncRateCtrl.h"
 #include <vector>
-#include "TLibCommon/hyz.h"
+#include "../TLibCommon/hyz.h"
 
-#include "../Lib/TLibCommon/OData.h"
-#if HYZ_OF_FRAME | HYZ_OF_CTU
+#if HYZ_RA
+#include "../Lib/TLibCommon/Opt.h"
+#include "../Lib/TLibCommon/hyz.h"
 #include <opencv2\core\core.hpp>
 #include <opencv2\opencv.hpp>
 #include <opencv2\imgproc\imgproc.hpp>

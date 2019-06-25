@@ -44,7 +44,7 @@
 #include <cmath>
 #include <algorithm>
 using namespace std;
-#include "../TLibCommon/hyz.h"
+
 
 //! \ingroup TLibEncoder
 //! \{
@@ -1280,7 +1280,6 @@ Int  TEncCu::updateCtuDataISlice(TComDataCU* pCtu, Int width, Int height)
  * \param rpcTempCU
  * \param earlyDetectionSkipMode
  */
-// I think this is what I have to focus on. Because it no the merge mode. But where is the AMVP mode? .iku 5.20
 Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU DEBUG_STRING_FN_DECLARE(sDebug), Bool *earlyDetectionSkipMode )
 {
   assert( rpcTempCU->getSlice()->getSliceType() != I_SLICE );
@@ -1288,8 +1287,8 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   {
     return;   // never check merge in fast deltaqp mode
   }
-  TComMvField  cMvFieldNeighbours[2 * MRG_MAX_NUM_CANDS]; // double length for mv of both lists. Consider why we need to multiply 2? Maybe for B Slice? .iku 520
-  UChar uhInterDirNeighbours[MRG_MAX_NUM_CANDS]; // Here is the candidate list, its length is 5. First 4 is for spatial neibour and the rest for temporal neibour
+  TComMvField  cMvFieldNeighbours[2 * MRG_MAX_NUM_CANDS]; // double length for mv of both lists
+  UChar uhInterDirNeighbours[MRG_MAX_NUM_CANDS];
   Int numValidMergeCand = 0;
   const Bool bTransquantBypassFlag = rpcTempCU->getCUTransquantBypass(0);
 
@@ -1299,32 +1298,8 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   }
   UChar uhDepth = rpcTempCU->getDepth( 0 );
   rpcTempCU->setPartSizeSubParts( SIZE_2Nx2N, 0, uhDepth ); // interprets depth relative to CTU level
+  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
 
-#if HYZ_PU_T_MERGE_FLAG
-// With our modification to the code, we now get our time index
-// So here, we have to decide which candidate come from the T
-  rpcTempCU->t_index = -1;
-  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
-  if (rpcTempCU->t_index == -1)
-  {
-    // Then there must be something wrong, when It happens, we have to sop the program. And then? dont care right now~
-    printf("Wrong, after get merge candidates, the t_index is still -1!");
-    exit(1);
-  }
-  else if (rpcTempCU->t_index == -2)
-  {
-	  // This situation, we don't get the temporal index, because we can't find it
-	  rpcTempCU->setTFlagSubParts1(255, 0, 0, uhDepth);
-  }
-  else
-  {
-	  rpcTempCU->setTFlagSubParts1(rpcTempCU->t_index, 0, 0, uhDepth);
-  }
-  // Ok, I think now we have write down the t_index to the CU internally, juts output when
-  // finish encoding one frame and let's see what will happen~
-#else
-  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
-#endif
   Int mergeCandBuffer[MRG_MAX_NUM_CANDS];
   for( UInt ui = 0; ui < numValidMergeCand; ++ui )
   {
@@ -1363,7 +1338,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
           rpcTempCU->setInterDirSubParts( uhInterDirNeighbours[uiMergeCand], 0, 0, uhDepth ); // interprets depth relative to CTU level
           rpcTempCU->getCUMvField( REF_PIC_LIST_0 )->setAllMvField( cMvFieldNeighbours[0 + 2*uiMergeCand], SIZE_2Nx2N, 0, 0 ); // interprets depth relative to rpcTempCU level
           rpcTempCU->getCUMvField( REF_PIC_LIST_1 )->setAllMvField( cMvFieldNeighbours[1 + 2*uiMergeCand], SIZE_2Nx2N, 0, 0 ); // interprets depth relative to rpcTempCU level
-          // Indeed, in this stage, we have lost the info if whether this MV comes from T or S, we have to write it earlier! .iku 521
+
           // do MC
           m_pcPredSearch->motionCompensation ( rpcTempCU, m_ppcPredYuvTemp[uhDepth] );
           // estimate residual and encode everything
@@ -1432,7 +1407,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   DEBUG_STRING_APPEND(sDebug, bestStr)
 }
 
-// This function is used to do Normal(default) inter prediction .iku 520
+
 #if AMP_MRG
 Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, PartSize ePartSize DEBUG_STRING_FN_DECLARE(sDebug), Bool bUseMRG)
 #else
@@ -1459,7 +1434,7 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
   rpcTempCU->setChromaQpAdjSubParts( rpcTempCU->getCUTransquantBypass(0) ? 0 : m_cuChromaQpOffsetIdxPlus1, 0, uhDepth );
 
 #if AMP_MRG
-  rpcTempCU->setMergeAMP (true);// Here we will try to test AMP mode, so we have to setMergeAMP(true), and the next line is to do the real search .iku 520
+  rpcTempCU->setMergeAMP (true);
   m_pcPredSearch->predInterSearch ( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] DEBUG_STRING_PASS_INTO(sTest), false, bUseMRG );
 #else
   m_pcPredSearch->predInterSearch ( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] );
@@ -1471,7 +1446,7 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
     return;
   }
 #endif
-// Next step's calculation: that is, calculate the residue and the total cost
+
   m_pcPredSearch->encodeResAndCalcRdInterCU( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcResiYuvBest[uhDepth], m_ppcRecoYuvTemp[uhDepth], false DEBUG_STRING_PASS_INTO(sTest) );
   rpcTempCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcTempCU->getTotalBits(), rpcTempCU->getTotalDistortion() );
 
