@@ -61,15 +61,7 @@
 #include "TEncAnalyze.h"
 #include "TEncRateCtrl.h"
 #include <vector>
-#include "../TLibCommon/hyz.h"
 
-#if HYZ_RA
-#include "../Lib/TLibCommon/Opt.h"
-#include "../Lib/TLibCommon/hyz.h"
-#include <opencv2\core\core.hpp>
-#include <opencv2\opencv.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
-#endif
 //! \ingroup TLibEncoder
 //! \{
 

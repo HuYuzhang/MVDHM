@@ -48,11 +48,10 @@
 #include "TComSlice.h"
 #include "TComRdCost.h"
 #include "TComPattern.h"
-#include "hyz.h"
-#include "Opt.h"
+
 //! \ingroup TLibCommon
 //! \{
-
+#include "hyz.h"
 class TComTU; // forward declaration
 
 static const UInt NUM_MOST_PROBABLE_MODES=3;
@@ -90,7 +89,11 @@ private:
   // -------------------------------------------------------------------------------------------------------------------
   // CU data
   // -------------------------------------------------------------------------------------------------------------------
-
+#if HYZ_TRACK_PU
+  SChar*			hyz_lrx;
+  SChar*			hyz_lry;
+  UChar*			hyz_puid;
+#endif
   Bool*         m_skipFlag;                             ///< array of skip flags
   SChar*        m_pePartSize;                           ///< array of partition sizes
   SChar*        m_pePredMode;                           ///< array of prediction modes
@@ -159,13 +162,10 @@ protected:
 
   Void          deriveRightBottomIdx          ( UInt uiPartIdx, UInt& ruiPartIdxRB ) const;
   Bool          xGetColMVP                    ( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const;
-  Bool          xGetColMVP                     (const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx, PUPos p) const;
 
   /// compute scaling factor from POC difference
   static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
-#if HYZ_RA
-  static TComMv    xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, PUPos curPU);
-#endif
+
   Void          xDeriveCenterIdx              ( UInt uiPartIdx, UInt& ruiPartIdxCenter ) const;
 
 public:
@@ -223,7 +223,20 @@ public:
   Void          setPartitionSize              ( UInt uiIdx, PartSize uh )                                  { m_pePartSize[uiIdx] = uh;                  }
   Void          setPartSizeSubParts           ( PartSize eMode, UInt uiAbsPartIdx, UInt uiDepth );
   Void          setCUTransquantBypassSubParts ( Bool flag, UInt uiAbsPartIdx, UInt uiDepth );
+#if HYZ_TRACK_PU
+  SChar*          getLrx()                                                          { return hyz_lrx; }
+  SChar           getLrx							(UInt idx) const                                           { return hyz_lrx[idx]; }
+  Void          setLrx							(UInt idx, Int x)                                      { hyz_lrx[idx] = x; }
+  Void          setLrxSubParts					(Int x, UInt absPartIdx, UInt depth);
 
+  SChar*          getLry()																					{ return hyz_lry; }
+  SChar           getLry(UInt idx) const																{ return hyz_lry[idx]; }
+  Void          setLry							(UInt idx, Int y)														{ hyz_lry[idx] = y; }
+  Void          setLrySubParts					(Int y, UInt absPartIdx, UInt depth);
+
+  // Below is to get the position and the size of the PU according to its idx
+  Void			getPUInfo(UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int& nPSH) const;
+#endif
   Bool*         getSkipFlag                   ( )                                                          { return m_skipFlag;                         }
   Bool          getSkipFlag                   ( UInt idx ) const                                           { return m_skipFlag[idx];                    }
   Void          setSkipFlag                   ( UInt idx, Bool skip )                                      { m_skipFlag[idx] = skip;                    }
@@ -321,7 +334,12 @@ public:
   Bool          getMergeFlag                  ( UInt uiIdx ) const                                         { return m_pbMergeFlag[uiIdx];               }
   Void          setMergeFlag                  ( UInt uiIdx, Bool b )                                       { m_pbMergeFlag[uiIdx] = b;                  }
   Void          setMergeFlagSubParts          ( Bool bMergeFlag, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth );
-
+#if HYZ_TRACK_PU
+  UChar*          getPuId()																					{ return hyz_puid; }
+  UChar           getPuId(UInt idx) const																{ return hyz_puid[idx]; }
+  Void          setPuId(UInt idx, UChar v)														{ hyz_puid[idx] = v; }
+  Void          setPuIdSubParts(UChar v, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth);
+#endif
   UChar*        getMergeIndex                 ( )                                                          { return m_puhMergeIndex;                    }
   UChar         getMergeIndex                 ( UInt uiIdx ) const                                         { return m_puhMergeIndex[uiIdx];             }
   Void          setMergeIndex                 ( UInt uiIdx, UInt uiMergeIndex )                            { m_puhMergeIndex[uiIdx] = uiMergeIndex;     }

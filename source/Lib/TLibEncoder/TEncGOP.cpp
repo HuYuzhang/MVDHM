@@ -52,9 +52,6 @@
 #include <deque>
 using namespace std;
 
-#if HYZ_RA
-extern Opt iku;
-#endif
 //! \ingroup TLibEncoder
 //! \{
 
@@ -1549,38 +1546,6 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     const Int numSubstreams        = numSubstreamRows * numSubstreamsColumns;
     std::vector<TComOutputBitstream> substreamsOut(numSubstreams);
 
-#if HYZ_RA
-	BitDepths tmpB = pcPic->getPicSym()->getSPS().getBitDepths();
-	UInt height = pcPic->getPicSym()->getSPS().getPicHeightInLumaSamples();
-	UInt width = pcPic->getPicSym()->getSPS().getPicWidthInLumaSamples();
-	TComPicYuv* orgP = pcPic->getPicYuvOrg();
-	cv::Mat curImg;
-	curImg.create(height * 3 / 2, width, CV_8UC1);
-	pcPic->getPicYuvOrg()->dump2((UChar*)curImg.data, tmpB);
-	cv::Mat rgbImg;
-	cv::cvtColor(curImg, rgbImg, CV_YUV2BGR_I420);
-	Int curPOC = pcPic->getPOC();
-	std::string fileName = std::to_string(curPOC) + ".png";
-	cv::imwrite(fileName, rgbImg);
-	if (curPOC == 0)
-	{
-		// We will init the iku(global variables...
-		iku.picH = height;
-		iku.picW = width;
-		iku.FrameWidthInCtus = pcPic->getPicSym()->getFrameWidthInCtus();
-		iku.width = width;
-		iku.height = height;
-		iku.maxCUHeight = pcPic->getPicSym()->getSPS().getMaxCUHeight();
-		iku.maxCUWidth = pcPic->getPicSym()->getSPS().getMaxCUWidth();
-	}
-	else
-	{
-		for (UInt i = 0; i < curPOC; ++i)
-		{
-			iku.updateMap(i, curPOC);
-		}
-	}
-#endif
     // now compress (trial encode) the various slice segments (slices, and dependent slices)
     {
       const UInt numberOfCtusInFrame=pcPic->getPicSym()->getNumberOfCtusInFrame();

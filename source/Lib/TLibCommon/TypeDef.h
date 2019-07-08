@@ -96,7 +96,7 @@
 
 // Please also refer to "TDecConformance.h" for DECODER_PARTIAL_CONFORMANCE_CHECK
 
-#define REDUCED_ENCODER_MEMORY                            1 ///< When 1, the encoder will allocate TComPic memory when required and release it when no longer required.
+#define REDUCED_ENCODER_MEMORY                            0 ///< When 1, the encoder will allocate TComPic memory when required and release it when no longer required.
 
 #define ADAPTIVE_QP_SELECTION                             1 ///< G382: Adaptive reconstruction levels, non-normative part for adaptive QP selection
 

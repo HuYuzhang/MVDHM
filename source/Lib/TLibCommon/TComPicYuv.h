@@ -43,7 +43,6 @@
 #include "TComRom.h"
 #include "TComChromaFormat.h"
 #include "SEI.h"
-#include "hyz.h"
 
 //! \ingroup TLibCommon
 //! \{
@@ -163,9 +162,7 @@ public:
 
   //  Extend function of picture buffer
   Void          extendPicBorder   ();
-#if HYZ_RA
-  Void          dump2(UChar* p, const BitDepths &bitDepths);
-#endif
+
   //  Dump picture
   Void          dump              (const std::string &fileName, const BitDepths &bitDepths, const Bool bAppend=false, const Bool bForceTo8Bit=false) const ;
 
