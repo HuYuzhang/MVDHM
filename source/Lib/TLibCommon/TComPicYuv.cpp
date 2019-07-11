@@ -331,5 +331,34 @@ Void TComPicYuv::dump (const std::string &fileName, const BitDepths &bitDepths, 
 
   fclose(pFile);
 }
+#if HYZ_RA
+Void  TComPicYuv::dump2(UChar* p, const BitDepths &bitDepths)
+{
 
+	for (Int comp = 0; comp < getNumberValidComponents(); comp++)
+	{
+		const ComponentID  compId = ComponentID(comp);
+		const Pel         *pi = getAddr(compId);
+		const Int          stride = getStride(compId);
+		const Int          height = getHeight(compId);
+		const Int          width = getWidth(compId);
+
+
+		const Int shift = bitDepths.recon[toChannelType(compId)] - 8;
+		const Int offset = (shift>0) ? (1 << (shift - 1)) : 0;
+		for (Int y = 0; y < height; y++)
+		{
+			for (Int x = 0; x < width; x++)
+			{
+				UChar uc = (UChar)Clip3<Pel>(0, 255, (pi[x] + offset) >> shift);
+				*p = uc;
+				++p;
+				/*UChar uc = (UChar)Clip3<Pel>(0, 255, (pi[x] + offset) >> shift);
+				fwrite(&uc, sizeof(UChar), 1, pFile);*/
+			}
+			pi += stride;
+		}
+	}
+}
+#endif
 //! \}

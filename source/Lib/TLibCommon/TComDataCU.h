@@ -52,6 +52,7 @@
 //! \ingroup TLibCommon
 //! \{
 #include "hyz.h"
+#include "Opt.h"
 class TComTU; // forward declaration
 
 static const UInt NUM_MOST_PROBABLE_MODES=3;
@@ -158,11 +159,19 @@ protected:
 
   /// adds a single possible motion vector predictor candidate
   Bool          xAddMVPCandUnscaled           ( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir ) const;
+#if HYZ_SPATIAL
+  Bool          xAddMVPCandWithScaling        ( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir, PUPos p ) const;
+#else
   Bool          xAddMVPCandWithScaling        ( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir ) const;
+#endif
 
   Void          deriveRightBottomIdx          ( UInt uiPartIdx, UInt& ruiPartIdxRB ) const;
   Bool          xGetColMVP                    ( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const;
+#if HYZ_RA
+  Bool          xGetColMVP					  ( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx, PUPos p) const;
+  static Float*    xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, PUPos curPU, PUPos colPU);
 
+#endif
   /// compute scaling factor from POC difference
   static Int    xGetDistScaleFactor           ( Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC );
 

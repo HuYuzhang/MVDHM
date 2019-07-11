@@ -39,7 +39,9 @@
 #include "TComDataCU.h"
 #include "TComTU.h"
 #include "TComPic.h"
-
+#if HYZ_RA
+extern Opt iku;
+#endif
 //! \ingroup TLibCommon
 //! \{
 
@@ -2442,16 +2444,29 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
     }
 
     iRefIdx = 0;
-
+#if HYZ_RA
+	Int _w, _h, _x, _y;
+	getPartPosition(uiPUIdx, _x, _y, _w, _h);
+	PUPos pp = PUPos(_x, _y, _x + _w - 1, _y + _h - 1);
+	iku.updatePU(m_ctuRsAddr, _x, _y, _w, _h);// I have forgetten what is this function's usage...
+#endif
     Bool bExistMV = false;
     UInt uiPartIdxCenter;
     Int dir = 0;
     UInt uiArrayAddr = iCount;
     xDeriveCenterIdx( uiPUIdx, uiPartIdxCenter );
+#if HYZ_RA
+	bExistMV = ctuRsAddr >= 0 && xGetColMVP(REF_PIC_LIST_0, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx, pp);
+#else
     bExistMV = ctuRsAddr >= 0 && xGetColMVP( REF_PIC_LIST_0, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx );
-    if( bExistMV == false )
+#endif 
+	if( bExistMV == false )
     {
+#if HYZ_RA
+		bExistMV = xGetColMVP(REF_PIC_LIST_0, getCtuRsAddr(), uiPartIdxCenter, cColMv, iRefIdx, pp);
+#else
       bExistMV = xGetColMVP( REF_PIC_LIST_0, getCtuRsAddr(), uiPartIdxCenter,  cColMv, iRefIdx );
+#endif
     }
     if( bExistMV )
     {
@@ -2461,6 +2476,10 @@ Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComM
 
     if ( getSlice()->isInterB() )
     {
+#if HYZ_RA
+		// right now I only consider the LDP so this block should not be entered
+		assert(0);
+#endif
       bExistMV = ctuRsAddr >= 0 && xGetColMVP( REF_PIC_LIST_1, ctuRsAddr, uiAbsPartAddr, cColMv, iRefIdx);
       if( bExistMV == false )
       {
@@ -2662,7 +2681,12 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
   {
     return;
   }
-
+#if HYZ_RA
+  Int _w, _h, _x, _y;
+  getPartPosition(partIdx, _x, _y, _w, _h);
+  PUPos pp = PUPos(_x, _y, _x + _w - 1, _y + _h - 1);
+  //iku.updatePU(m_ctuRsAddr, _x, _y, _w, _h);
+#endif
   //-- Get Spatial MV
   UInt partIdxLT, partIdxRT, partIdxLB;
   deriveLeftRightTopIdx( partIdx, partIdxLT, partIdxRT );
@@ -2689,10 +2713,18 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
       bAdded = xAddMVPCandUnscaled( *pInfo, eRefPicList, refIdx, partIdxLB, MD_LEFT );
       if(!bAdded)
       {
-        bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxLB, MD_BELOW_LEFT);
+#if HYZ_SPATIAL
+        bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxLB, MD_BELOW_LEFT, pp);
+#else
+		 bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxLB, MD_BELOW_LEFT);
+#endif
         if (!bAdded)
         {
+#if HYZ_SPATIAL
+			xAddMVPCandWithScaling(*pInfo, eRefPicList, refIdx, partIdxLB, MD_LEFT, pp);
+#else
           xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxLB, MD_LEFT );
+#endif
         }
       }
     }
@@ -2713,13 +2745,25 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
 
   if(!isScaledFlagLX)
   {
-    Bool bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxRT, MD_ABOVE_RIGHT);
+#if HYZ_SPATIAL
+	  Bool bAdded = xAddMVPCandWithScaling(*pInfo, eRefPicList, refIdx, partIdxRT, MD_ABOVE_RIGHT, pp);
+#else
+	  Bool bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxRT, MD_ABOVE_RIGHT);
+#endif
     if (!bAdded)
     {
-      bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxRT, MD_ABOVE);
+#if HYZ_SPATIAL
+		bAdded = xAddMVPCandWithScaling(*pInfo, eRefPicList, refIdx, partIdxRT, MD_ABOVE, pp);
+#else
+		bAdded = xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxRT, MD_ABOVE);
+#endif
       if(!bAdded)
       {
-        xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxLT, MD_ABOVE_LEFT);
+#if HYZ_SPATIAL
+		  xAddMVPCandWithScaling(*pInfo, eRefPicList, refIdx, partIdxLT, MD_ABOVE_LEFT, pp);
+#else
+		  xAddMVPCandWithScaling( *pInfo, eRefPicList, refIdx, partIdxLT, MD_ABOVE_LEFT);
+#endif
       }
     }
   }
@@ -2741,7 +2785,12 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
     TComMv cColMv;
     UInt partIdxRB;
     UInt absPartIdx;
-
+#if HYZ_RA
+	Int _w, _h, _x, _y;
+	getPartPosition(partIdx, _x, _y, _w, _h);
+	PUPos pp = PUPos(_x, _y, _x + _w - 1, _y + _h - 1);
+	iku.updatePU(m_ctuRsAddr, _x, _y, _w, _h);
+#endif
     deriveRightBottomIdx( partIdx, partIdxRB );
     UInt absPartAddr = m_absZIdxInCtu + partAddr;
 
@@ -2771,16 +2820,24 @@ Void TComDataCU::fillMvpCand ( const UInt partIdx, const UInt partAddr, const Re
         absPartAddr = 0;
       }
     }
+#if HYZ_RA
+	if (ctuRsAddr >= 0 && xGetColMVP(eRefPicList, ctuRsAddr, absPartAddr, cColMv, refIdx_Col, pp))
+#else
     if ( ctuRsAddr >= 0 && xGetColMVP( eRefPicList, ctuRsAddr, absPartAddr, cColMv, refIdx_Col ) )
-    {
+#endif
+	{
       pInfo->m_acMvCand[pInfo->iN++] = cColMv;
     }
     else
     {
       UInt uiPartIdxCenter;
       xDeriveCenterIdx( partIdx, uiPartIdxCenter );
-      if (xGetColMVP( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col ))
-      {
+#if HYZ_RA
+      if (xGetColMVP( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col , pp))
+#else
+	  if (xGetColMVP( eRefPicList, getCtuRsAddr(), uiPartIdxCenter,  cColMv, refIdx_Col ))
+#endif
+	  {
         pInfo->m_acMvCand[pInfo->iN++] = cColMv;
       }
     }
@@ -2941,7 +2998,12 @@ Bool TComDataCU::xAddMVPCandUnscaled( AMVPInfo &info, const RefPicList eRefPicLi
  * \param eDir
  * \returns Bool
  */
-Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir ) const
+Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPicList, const Int iRefIdx, const UInt uiPartUnitIdx, const MVP_DIR eDir 
+#if HYZ_SPATIAL
+	,PUPos p) const 
+#else
+	) const
+#endif
 {
   const TComDataCU* neibCU = NULL;
   UInt neibPUPartIdx;
@@ -3008,6 +3070,33 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
         }
         else
         {
+#if HYZ_SPATIAL
+			//const Int colPOC = pColCtu->getSlice()->getPOC();
+			//const Int colRefPOC = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
+
+			//const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
+			if (currPOC == 2 && currRefPOC == 1 && p.lx >= 144 && p.rx <= 160 && p.ly >= 48 && p.ry <= 64)
+			{
+				int ppppp = 0;
+			}
+			if (neibPUPartIdx == 6)
+			{
+				int ppp = 0;
+			}
+			PUPos col;
+			Int hyzx, hyzy, hyzw, hyzh;
+			neibCU->getPUInfo(neibPUPartIdx, hyzx, hyzy, hyzw, hyzh);
+			printf("------%d\n", neibPUPartIdx);
+			col.lx = hyzx;
+			col.ly = hyzy;
+			col.rx = hyzx + hyzw - 1;
+			col.ry = hyzy + hyzh - 1;
+			const Int neibRefPOC = neibCU->getSlice()->getRefPOC(eRefPicListIndex, neibRefIdx);
+
+			Float* fp = xGetDistScaleFactor(currPOC, currRefPOC, neibPOC, neibRefPOC, p, col);
+			rcMv = cMvPred.scaleMv(fp[0], fp[1]);
+			delete[] fp;
+#else
           const Int neibRefPOC = neibCU->getSlice()->getRefPOC( eRefPicListIndex, neibRefIdx );
           const Int scale      = xGetDistScaleFactor( currPOC, currRefPOC, neibPOC, neibRefPOC );
           if ( scale == 4096 )
@@ -3018,6 +3107,7 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
           {
             rcMv = cMvPred.scaleMv( scale );
           }
+#endif
         }
 
         info.m_acMvCand[info.iN++] = rcMv;
@@ -3030,6 +3120,10 @@ Bool TComDataCU::xAddMVPCandWithScaling( AMVPInfo &info, const RefPicList eRefPi
 
 Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx ) const
 {
+#if HYZ_RA
+	// I don't allow this function to run!!!
+	assert(0);
+#endif
   const UInt absPartAddr = partUnitIdx;
 
   // use coldir.
@@ -3102,20 +3196,14 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 
 #if HYZ_TRACK_PU
   // now we have absPartAddr...
-  Int PUx, PUy, hyzH, hyzW;
-  //pColCtu->getPartPosition(absPartAddr, PUx, PUy, hyzW, hyzH);
-  /*hyzH = pColCtu->getHeight(absPartAddr);
-  hyzW = pColCtu->getWidth(absPartAddr);
-  pColCtu->getZorderIdxInCtu();
-  PUx = pColCtu->getLrx(absPartAddr);
-  PUy = pColCtu->getLry(absPartAddr);*/
-  Int hyz_poc = pColCtu->getSlice()->getPOC();
-  if (hyz_poc == 2 && pColCtu->getCtuRsAddr() == 2)// && absPartAddr >= 192)
-  {
-	  pColCtu->getPUInfo(absPartAddr, PUx, PUy, hyzW, hyzH);
-	  printf("X: %d, Y: %d, addr: %d, Height: %d, Width: %d\n", PUx, PUy, absPartAddr, hyzH, hyzW);
-	  PUx = 0;
-  }
+  //Int PUx, PUy, hyzH, hyzW;
+  //Int hyz_poc = pColCtu->getSlice()->getPOC();
+  //if (hyz_poc == 2 && pColCtu->getCtuRsAddr() == 2)// && absPartAddr >= 192)
+  //{
+	 // pColCtu->getPUInfo(absPartAddr, PUx, PUy, hyzW, hyzH);
+	 // printf("X: %d, Y: %d, addr: %d, Height: %d, Width: %d\n", PUx, PUy, absPartAddr, hyzH, hyzW);
+	 // PUx = 0;
+  //}
 #endif
   if ( bIsCurrRefLongTerm /*|| bIsColRefLongTerm*/ )
   {
@@ -3145,6 +3233,155 @@ Bool TComDataCU::xGetColMVP( const RefPicList eRefPicList, const Int ctuRsAddr, 
 
   return true;
 }
+
+#if HYZ_RA
+Bool TComDataCU::xGetColMVP(const RefPicList eRefPicList, const Int ctuRsAddr, const Int partUnitIdx, TComMv& rcMv, const Int refIdx, PUPos p) const
+{
+	const UInt absPartAddr = partUnitIdx;
+
+	// use coldir.
+	const TComPic    * const pColPic = getSlice()->getRefPic(RefPicList(getSlice()->isInterB() ? 1 - getSlice()->getColFromL0Flag() : 0), getSlice()->getColRefIdx());
+#if REDUCED_ENCODER_MEMORY
+	if (!pColPic->getPicSym()->hasDPBPerCtuData())
+	{
+		return false;
+	}
+	const TComPicSym::DPBPerCtuData * const pColDpbCtu = &(pColPic->getPicSym()->getDPBPerCtuData(ctuRsAddr));
+	const TComSlice * const pColSlice = pColDpbCtu->getSlice();
+	if (pColDpbCtu->getPartitionSize(partUnitIdx) == NUMBER_OF_PART_SIZES)
+#else
+	const TComDataCU * const pColCtu = pColPic->getCtu(ctuRsAddr);
+	if (pColCtu->getPic() == 0 || pColCtu->getPartitionSize(partUnitIdx) == NUMBER_OF_PART_SIZES)
+#endif
+	{
+		return false;
+	}
+
+#if REDUCED_ENCODER_MEMORY
+	if (!pColDpbCtu->isInter(absPartAddr))
+#else
+	if (!pColCtu->isInter(absPartAddr))
+#endif
+	{
+		return false;
+	}
+
+	RefPicList eColRefPicList = getSlice()->getCheckLDC() ? eRefPicList : RefPicList(getSlice()->getColFromL0Flag());
+#if REDUCED_ENCODER_MEMORY
+	Int iColRefIdx = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#else
+	Int iColRefIdx = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#endif
+
+	if (iColRefIdx < 0)
+	{
+		eColRefPicList = RefPicList(1 - eColRefPicList);
+#if REDUCED_ENCODER_MEMORY
+		iColRefIdx = pColDpbCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#else
+		iColRefIdx = pColCtu->getCUMvField(RefPicList(eColRefPicList))->getRefIdx(absPartAddr);
+#endif
+
+		if (iColRefIdx < 0)
+		{
+			return false;
+		}
+	}
+
+	const Bool bIsCurrRefLongTerm = m_pcSlice->getRefPic(eRefPicList, refIdx)->getIsLongTerm();
+#if REDUCED_ENCODER_MEMORY
+	const Bool bIsColRefLongTerm = pColSlice->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+#else
+	const Bool bIsColRefLongTerm = pColCtu->getSlice()->getIsUsedAsLongTerm(eColRefPicList, iColRefIdx);
+#endif
+
+	if (bIsCurrRefLongTerm != bIsColRefLongTerm)
+	{
+		return false;
+	}
+
+	// Scale the vector.
+#if REDUCED_ENCODER_MEMORY
+	const TComMv &cColMv = pColDpbCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#else
+	const TComMv &cColMv = pColCtu->getCUMvField(eColRefPicList)->getMv(absPartAddr);
+#endif
+	if (bIsCurrRefLongTerm /*|| bIsColRefLongTerm*/)
+	{
+		rcMv = cColMv;
+	}
+	else
+	{
+		const Int currPOC = m_pcSlice->getPOC();
+#if REDUCED_ENCODER_MEMORY
+		const Int colPOC = pColSlice->getPOC();
+		const Int colRefPOC = pColSlice->getRefPOC(eColRefPicList, iColRefIdx);
+#else
+		const Int colPOC = pColCtu->getSlice()->getPOC();
+		const Int colRefPOC = pColCtu->getSlice()->getRefPOC(eColRefPicList, iColRefIdx);
+#endif
+		const Int currRefPOC = m_pcSlice->getRefPic(eRefPicList, refIdx)->getPOC();
+		
+		PUPos col;
+		Int hyzx, hyzy, hyzw, hyzh;
+		pColCtu->getPUInfo(absPartAddr, hyzx, hyzy, hyzw, hyzh);
+		col.lx = hyzx;
+		col.ly = hyzy;
+		col.rx = hyzx + hyzw - 1;
+		col.ry = hyzy + hyzh - 1;
+		
+		Float* fp = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, p, col);
+		rcMv = cColMv.scaleMv(fp[0], fp[1]);
+		delete[] fp;
+	}
+
+	return true;
+}
+Float* TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, PUPos curPU, PUPos colPU)
+{
+
+
+	//if (iCurrPOC == 2 && iCurrRefPOC == 1 && iku.curCtu == 2 && curPU.lx == 128 && curPU.ly == 16)
+	//{
+	//	printf("X: %d, y: %d, width: %d, height: %d\n", curPU.lx, curPU.ly, curPU.rx - curPU.lx, curPU.ry - curPU.ly);
+	//}
+	if (iCurrPOC == 2 && iCurrRefPOC == 1 && curPU.lx >= 128 && curPU.rx <= 136 && curPU.ly >= 48 && curPU.ry <= 56)
+	{
+		int ppppp = 0;
+	}
+	Float *retp = new Float[6];
+	OptInfo tt;
+	tt = iku.queryFlow(iCurrRefPOC, iCurrPOC, curPU.lx, curPU.ly, curPU.rx, curPU.ry);
+	retp[2] = tt.fx;
+	retp[3] = tt.fy;
+	tt = iku.queryFlow(iColRefPOC, iColPOC, colPU.lx, colPU.ly, colPU.rx, colPU.ry);
+	retp[4] = tt.fx;
+	retp[5] = tt.fy;
+#if HYZ_THRE
+	double hm = (double)(iCurrPOC - iCurrRefPOC) / (double)(iColPOC - iColRefPOC);
+	if (abs(retp[2]) >= 2.0 && abs(retp[4]) >= 2.0)
+	{
+		retp[0] = retp[2] / retp[4];
+	}
+	else
+	{
+		retp[0] = hm;
+	}
+	if (abs(retp[3]) >= 2.0 && abs(retp[5]) >= 2.0)
+	{
+		retp[1] = retp[3] / retp[5];
+	}
+	else
+	{
+		retp[1] = hm;
+	}
+#else
+	retp[0] = retp[2] / retp[4];
+	retp[1] = retp[3] / retp[5];
+#endif
+	return retp;
+}
+#endif
 
 // Static member
 Int TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC)
@@ -3268,11 +3505,14 @@ Void TComDataCU::getPUInfo(UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int& nPSH)
 {
 	//Int cuX = getLrx(idx), cuY = getLry(idx), cuH = getHeight(idx), cuW = getHeight(idx);
 	// Then below part is learned from getPartPosition
-	UInt col = getLrx(partIdx);
-	UInt row = getLry(partIdx);
+	UInt baseX = m_ctuRsAddr % iku.FrameWidthInCtus * 64;
+	UInt baseY = m_ctuRsAddr / iku.FrameWidthInCtus * 64;
+	UInt col = getLrx(partIdx) + baseX;
+	UInt row = getLry(partIdx) + baseY;
 	UInt oldp = partIdx;
 	Int cuW = getWidth(partIdx), cuH = getHeight(partIdx);
 	partIdx = getPuId(partIdx);
+
 	switch (m_pePartSize[oldp])
 	{
 	case SIZE_2NxN:

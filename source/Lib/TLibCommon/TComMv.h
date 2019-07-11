@@ -39,7 +39,7 @@
 #define __TCOMMV__
 
 #include "CommonDef.h"
-
+#include "hyz.h"
 //! \ingroup TLibCommon
 //! \{
 
@@ -163,8 +163,16 @@ public:
     Int mvy = Clip3( -32768, 32767, (iScale * getVer() + 127 + (iScale * getVer() < 0)) >> 8 );
     return TComMv( mvx, mvy );
   }
+
+#if HYZ_RA
+  const TComMv scaleMv(Float sx, Float sy) const
+  {
+	  Int mvx = (Int)(((Float)getHor()) * sx);
+	  Int mvy = (Int)(((Float)getVer()) * sy);
+	  return TComMv(mvx, mvy);
+  }
+#endif
 };// END CLASS DEFINITION TComMV
 
 //! \}
-
 #endif // __TCOMMV__

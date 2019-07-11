@@ -43,6 +43,7 @@
 #include "TComRom.h"
 #include "TComChromaFormat.h"
 #include "SEI.h"
+#include "hyz.h"
 
 //! \ingroup TLibCommon
 //! \{
@@ -152,7 +153,9 @@ public:
 
   UInt          getChannelTypeScaleX(const ChannelType id) const { return ::getChannelTypeScaleX(id, m_chromaFormatIDC); }
   UInt          getChannelTypeScaleY(const ChannelType id) const { return ::getChannelTypeScaleY(id, m_chromaFormatIDC); }
-
+#if HYZ_RA
+  Void          dump2(UChar* p, const BitDepths &bitDepths);
+#endif
   // ------------------------------------------------------------------------------------------------
   //  Miscellaneous
   // ------------------------------------------------------------------------------------------------
