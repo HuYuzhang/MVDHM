@@ -1847,10 +1847,6 @@ Void TComDataCU::setMergeIndexSubParts ( UInt uiMergeIndex, UInt uiAbsPartIdx, U
 Void TComDataCU::setInterDirSubParts( UInt uiDir, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth )
 {
   setSubPart<UChar>( uiDir, m_puhInterDir, uiAbsPartIdx, uiDepth, uiPartIdx );
-#if HYZ_TRACK_PU
-  assert(uiPartIdx < 256);
-  setPuIdSubParts(uiPartIdx, uiAbsPartIdx, uiPartIdx, uiDepth);
-#endif
 }
 
 Void TComDataCU::setMVPIdxSubParts( Int iMVPIdx, RefPicList eRefPicList, UInt uiAbsPartIdx, UInt uiPartIdx, UInt uiDepth )
@@ -3329,7 +3325,6 @@ Bool TComDataCU::xGetColMVP(const RefPicList eRefPicList, const Int ctuRsAddr, c
 		col.ly = hyzy;
 		col.rx = hyzx + hyzw - 1;
 		col.ry = hyzy + hyzh - 1;
-		
 		Float* fp = xGetDistScaleFactor(currPOC, currRefPOC, colPOC, colRefPOC, p, col);
 		rcMv = cColMv.scaleMv(fp[0], fp[1]);
 		delete[] fp;
@@ -3340,7 +3335,7 @@ Bool TComDataCU::xGetColMVP(const RefPicList eRefPicList, const Int ctuRsAddr, c
 Float* TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPOC, Int iColRefPOC, PUPos curPU, PUPos colPU)
 {
 
-
+	assert(iCurrPOC != iColPOC);
 	//if (iCurrPOC == 2 && iCurrRefPOC == 1 && iku.curCtu == 2 && curPU.lx == 128 && curPU.ly == 16)
 	//{
 	//	printf("X: %d, y: %d, width: %d, height: %d\n", curPU.lx, curPU.ly, curPU.rx - curPU.lx, curPU.ry - curPU.ly);
@@ -3350,6 +3345,8 @@ Float* TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPO
 		int ppppp = 0;
 	}
 	Float *retp = new Float[6];
+	double hm = (double)(iCurrPOC - iCurrRefPOC) / (double)(iColPOC - iColRefPOC);
+
 	OptInfo tt;
 	tt = iku.queryFlow(iCurrRefPOC, iCurrPOC, curPU.lx, curPU.ly, curPU.rx, curPU.ry);
 	retp[2] = tt.fx;
@@ -3358,7 +3355,6 @@ Float* TComDataCU::xGetDistScaleFactor(Int iCurrPOC, Int iCurrRefPOC, Int iColPO
 	retp[4] = tt.fx;
 	retp[5] = tt.fy;
 #if HYZ_THRE
-	double hm = (double)(iCurrPOC - iCurrRefPOC) / (double)(iColPOC - iColRefPOC);
 	if (abs(retp[2]) >= 2.0 && abs(retp[4]) >= 2.0)
 	{
 		retp[0] = retp[2] / retp[4];
@@ -3501,6 +3497,67 @@ UInt TComDataCU::getCoefScanIdx(const UInt uiAbsPartIdx, const UInt uiWidth, con
 }
 
 #if HYZ_TRACK_PU
+void TComDataCU::writePUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth)
+{
+
+	TComPic   *const pcPic = pcCU->getPic();
+	TComSlice *const pcSlice = pcCU->getSlice();
+	const TComSPS   &sps = *(pcSlice->getSPS());
+	// const TComPPS   &pps = *(pcSlice->getPPS());
+
+	const UInt maxCUWidth = sps.getMaxCUWidth();
+	const UInt maxCUHeight = sps.getMaxCUHeight();
+
+	Bool bBoundary = false;
+	UInt uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiRPelX = uiLPelX + (maxCUWidth >> uiDepth) - 1;
+	UInt uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiBPelY = uiTPelY + (maxCUHeight >> uiDepth) - 1;
+
+	if ((uiRPelX < sps.getPicWidthInLumaSamples()) && (uiBPelY < sps.getPicHeightInLumaSamples()))
+	{
+	}
+	else
+	{
+		bBoundary = true;
+	}
+
+	if (((uiDepth < pcCU->getDepth(uiAbsPartIdx)) && (uiDepth < sps.getLog2DiffMaxMinCodingBlockSize())) || bBoundary)
+	{
+		UInt uiQNumParts = (pcPic->getNumPartitionsInCtu() >> (uiDepth << 1)) >> 2;
+
+		for (UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++, uiAbsPartIdx += uiQNumParts)
+		{
+			uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
+			{
+				writePUInfo(pcCU, uiAbsPartIdx, uiDepth + 1);
+			}
+		}
+		return;
+	}
+
+
+	// Now we have reached the lowest CU, Here we can found our PUs~ .iku 520
+	PartSize ePartSize = pcCU->getPartitionSize(uiAbsPartIdx);
+	UInt uiNumPU = (ePartSize == SIZE_2Nx2N ? 1 : (ePartSize == SIZE_NxN ? 4 : 2));// OK, we have 3 conditions, and each responds to different number of PU~ .iku 520
+	UInt cur_uiDepth = pcCU->getDepth(uiAbsPartIdx);
+	UInt uiPUOffset = (g_auiPUOffset[UInt(ePartSize)] << ((pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - cur_uiDepth) << 1)) >> 4;
+	//int* statics = *p;
+	pcCU->setLrxSubParts((pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]]) % 64, uiAbsPartIdx, cur_uiDepth);
+	pcCU->setLrySubParts((pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]]) % 64, uiAbsPartIdx, cur_uiDepth);
+	if (pcCU->isIntra(uiAbsPartIdx))
+	{
+		// I place it here because I want also apply it to intra~
+		return;
+	}
+	for (UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset)
+	{
+		//cout << pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiSubPartIdx]] << " " << pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiSubPartIdx]] << endl;
+		pcCU->setPuIdSubParts(uiPartIdx, uiSubPartIdx, uiPartIdx, cur_uiDepth);
+	}
+}
 Void TComDataCU::getPUInfo(UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int& nPSH)const
 {
 	//Int cuX = getLrx(idx), cuY = getLry(idx), cuH = getHeight(idx), cuW = getHeight(idx);

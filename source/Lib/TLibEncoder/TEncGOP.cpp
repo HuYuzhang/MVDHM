@@ -56,7 +56,167 @@ extern Opt iku;
 #endif
 //! \ingroup TLibEncoder
 //! \{
+#if HYZ_TRACK_PU
+void printCTUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth)
+{
 
+	TComPic   *const pcPic = pcCU->getPic();
+	TComSlice *const pcSlice = pcCU->getSlice();
+	const TComSPS   &sps = *(pcSlice->getSPS());
+	// const TComPPS   &pps = *(pcSlice->getPPS());
+
+	const UInt maxCUWidth = sps.getMaxCUWidth();
+	const UInt maxCUHeight = sps.getMaxCUHeight();
+
+	Bool bBoundary = false;
+	UInt uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiRPelX = uiLPelX + (maxCUWidth >> uiDepth) - 1;
+	UInt uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiBPelY = uiTPelY + (maxCUHeight >> uiDepth) - 1;
+
+	if ((uiRPelX < sps.getPicWidthInLumaSamples()) && (uiBPelY < sps.getPicHeightInLumaSamples()))
+	{
+	}
+	else
+	{
+		bBoundary = true;
+	}
+
+	if (((uiDepth < pcCU->getDepth(uiAbsPartIdx)) && (uiDepth < sps.getLog2DiffMaxMinCodingBlockSize())) || bBoundary)
+	{
+		UInt uiQNumParts = (pcPic->getNumPartitionsInCtu() >> (uiDepth << 1)) >> 2;
+
+		for (UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++, uiAbsPartIdx += uiQNumParts)
+		{
+			uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
+			{
+				printCTUInfo(pcCU, uiAbsPartIdx, uiDepth + 1);
+			}
+		}
+		return;
+	}
+	cout << "CUInfo: " << pcCU->getSlice()->getPOC() << ' ' << uiTPelY << ' ' << uiLPelX << ' ' << (maxCUWidth >> uiDepth) << ' ' << (maxCUHeight >> uiDepth) << ' ' << endl;
+}
+
+void printPUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth, int** p = NULL)
+{
+
+	TComPic   *const pcPic = pcCU->getPic();
+	TComSlice *const pcSlice = pcCU->getSlice();
+	const TComSPS   &sps = *(pcSlice->getSPS());
+	// const TComPPS   &pps = *(pcSlice->getPPS());
+
+	const UInt maxCUWidth = sps.getMaxCUWidth();
+	const UInt maxCUHeight = sps.getMaxCUHeight();
+
+	Bool bBoundary = false;
+	UInt uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiRPelX = uiLPelX + (maxCUWidth >> uiDepth) - 1;
+	UInt uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiBPelY = uiTPelY + (maxCUHeight >> uiDepth) - 1;
+
+	if ((uiRPelX < sps.getPicWidthInLumaSamples()) && (uiBPelY < sps.getPicHeightInLumaSamples()))
+	{
+	}
+	else
+	{
+		bBoundary = true;
+	}
+
+	if (((uiDepth < pcCU->getDepth(uiAbsPartIdx)) && (uiDepth < sps.getLog2DiffMaxMinCodingBlockSize())) || bBoundary)
+	{
+		UInt uiQNumParts = (pcPic->getNumPartitionsInCtu() >> (uiDepth << 1)) >> 2;
+
+		for (UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++, uiAbsPartIdx += uiQNumParts)
+		{
+			uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
+			{
+				printPUInfo(pcCU, uiAbsPartIdx, uiDepth + 1, p);
+			}
+		}
+		return;
+	}
+	if (pcCU->isIntra(uiAbsPartIdx))
+	{
+		//return;
+	}
+	// Now we have reached the lowest CU, Here we can found our PUs~ .iku 520
+	PartSize ePartSize = pcCU->getPartitionSize(uiAbsPartIdx);
+	UInt uiNumPU = (ePartSize == SIZE_2Nx2N ? 1 : (ePartSize == SIZE_NxN ? 4 : 2));// OK, we have 3 conditions, and each responds to different number of PU~ .iku 520
+	UInt cur_uiDepth = pcCU->getDepth(uiAbsPartIdx);
+	UInt uiPUOffset = (g_auiPUOffset[UInt(ePartSize)] << ((pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - cur_uiDepth) << 1)) >> 4;
+	//int* statics = *p;
+	for (UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset)
+	{
+		cout << pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiSubPartIdx]] << " " << pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiSubPartIdx]] << endl;
+	}
+}
+void writePUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth)
+{
+
+	TComPic   *const pcPic = pcCU->getPic();
+	TComSlice *const pcSlice = pcCU->getSlice();
+	const TComSPS   &sps = *(pcSlice->getSPS());
+	// const TComPPS   &pps = *(pcSlice->getPPS());
+
+	const UInt maxCUWidth = sps.getMaxCUWidth();
+	const UInt maxCUHeight = sps.getMaxCUHeight();
+
+	Bool bBoundary = false;
+	UInt uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiRPelX = uiLPelX + (maxCUWidth >> uiDepth) - 1;
+	UInt uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+	const UInt uiBPelY = uiTPelY + (maxCUHeight >> uiDepth) - 1;
+
+	if ((uiRPelX < sps.getPicWidthInLumaSamples()) && (uiBPelY < sps.getPicHeightInLumaSamples()))
+	{
+	}
+	else
+	{
+		bBoundary = true;
+	}
+
+	if (((uiDepth < pcCU->getDepth(uiAbsPartIdx)) && (uiDepth < sps.getLog2DiffMaxMinCodingBlockSize())) || bBoundary)
+	{
+		UInt uiQNumParts = (pcPic->getNumPartitionsInCtu() >> (uiDepth << 1)) >> 2;
+
+		for (UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++, uiAbsPartIdx += uiQNumParts)
+		{
+			uiLPelX = pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]];
+			uiTPelY = pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]];
+			if ((uiLPelX < sps.getPicWidthInLumaSamples()) && (uiTPelY < sps.getPicHeightInLumaSamples()))
+			{
+				writePUInfo(pcCU, uiAbsPartIdx, uiDepth + 1);
+			}
+		}
+		return;
+	}
+
+	
+	// Now we have reached the lowest CU, Here we can found our PUs~ .iku 520
+	PartSize ePartSize = pcCU->getPartitionSize(uiAbsPartIdx);
+	UInt uiNumPU = (ePartSize == SIZE_2Nx2N ? 1 : (ePartSize == SIZE_NxN ? 4 : 2));// OK, we have 3 conditions, and each responds to different number of PU~ .iku 520
+	UInt cur_uiDepth = pcCU->getDepth(uiAbsPartIdx);
+	UInt uiPUOffset = (g_auiPUOffset[UInt(ePartSize)] << ((pcCU->getSlice()->getSPS()->getMaxTotalCUDepth() - cur_uiDepth) << 1)) >> 4;
+	//int* statics = *p;
+	pcCU->setLrxSubParts((pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiAbsPartIdx]]) % 64, uiAbsPartIdx, cur_uiDepth);
+	pcCU->setLrySubParts((pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiAbsPartIdx]]) % 64, uiAbsPartIdx, cur_uiDepth);
+	if (pcCU->isIntra(uiAbsPartIdx))
+	{
+		// I place it here because I want also apply it to intra~
+		return;
+	}
+	for (UInt uiPartIdx = 0, uiSubPartIdx = uiAbsPartIdx; uiPartIdx < uiNumPU; uiPartIdx++, uiSubPartIdx += uiPUOffset)
+	{
+		//cout << pcCU->getCUPelX() + g_auiRasterToPelX[g_auiZscanToRaster[uiSubPartIdx]] << " " << pcCU->getCUPelY() + g_auiRasterToPelY[g_auiZscanToRaster[uiSubPartIdx]] << endl;
+		pcCU->setPuIdSubParts(uiPartIdx, uiSubPartIdx, uiPartIdx, cur_uiDepth);
+	}
+}
+#endif
 // ====================================================================================================================
 // Constructor / destructor / initialization / destroy
 // ====================================================================================================================

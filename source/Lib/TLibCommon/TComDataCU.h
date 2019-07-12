@@ -233,18 +233,20 @@ public:
   Void          setPartSizeSubParts           ( PartSize eMode, UInt uiAbsPartIdx, UInt uiDepth );
   Void          setCUTransquantBypassSubParts ( Bool flag, UInt uiAbsPartIdx, UInt uiDepth );
 #if HYZ_TRACK_PU
-  SChar*          getLrx()                                                          { return hyz_lrx; }
-  SChar           getLrx							(UInt idx) const                                           { return hyz_lrx[idx]; }
-  Void          setLrx							(UInt idx, Int x)                                      { hyz_lrx[idx] = x; }
-  Void          setLrxSubParts					(Int x, UInt absPartIdx, UInt depth);
+  SChar*        getLrx()																				   { return hyz_lrx; }
+  SChar         getLrx					      ( UInt idx ) const                                           { return hyz_lrx[idx]; }
+  Void          setLrx						  ( UInt idx, Int x )                                          { hyz_lrx[idx] = x; }
+  Void          setLrxSubParts				  ( Int x, UInt absPartIdx, UInt depth );
 
-  SChar*          getLry()																					{ return hyz_lry; }
-  SChar           getLry(UInt idx) const																{ return hyz_lry[idx]; }
-  Void          setLry							(UInt idx, Int y)														{ hyz_lry[idx] = y; }
-  Void          setLrySubParts					(Int y, UInt absPartIdx, UInt depth);
+  SChar*        getLry()																				   { return hyz_lry; }
+  SChar         getLry                        ( UInt idx ) const										   { return hyz_lry[idx]; }
+  Void          setLry						  ( UInt idx, Int y )										   { hyz_lry[idx] = y; }
+  Void          setLrySubParts				  ( Int y, UInt absPartIdx, UInt depth );
 
   // Below is to get the position and the size of the PU according to its idx
   Void			getPUInfo(UInt partIdx, Int& xP, Int& yP, Int& nPSW, Int& nPSH) const;
+  void writePUInfo(TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth);
+
 #endif
   Bool*         getSkipFlag                   ( )                                                          { return m_skipFlag;                         }
   Bool          getSkipFlag                   ( UInt idx ) const                                           { return m_skipFlag[idx];                    }
